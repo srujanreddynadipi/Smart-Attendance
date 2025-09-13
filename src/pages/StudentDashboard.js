@@ -20,15 +20,20 @@ import {
   Settings,
   Home,
   Users,
-  Activity
+  Activity,
+  LogOut
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { logoutUser } from '../firebase/auth';
+import ProfilePage from './ProfilePage';
 
-const StudentDashboard = () => {
-  const [currentStep, setCurrentStep] = useState('home'); // home, scan, location, face, success
+const StudentDashboard = ({ onLogout }) => {
+  const { userData } = useAuth();
+  const [currentStep, setCurrentStep] = useState('home'); // home, scan, location, face, success, profile
   const [studentData, setStudentData] = useState({
-    name: 'John Doe',
-    id: 'ST2024001',
-    class: 'Computer Science - Final Year',
+    name: userData?.name || 'John Doe',
+    id: userData?.studentId || 'ST2024001',
+    class: userData?.academic?.course || 'Computer Science - Final Year',
     profileImage: '/api/placeholder/80/80'
   });
   
@@ -38,6 +43,28 @@ const StudentDashboard = () => {
     faceVerified: false,
     sessionData: null
   });
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      if (onLogout) {
+        onLogout();
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  // Handle navigation to profile
+  const handleProfileView = () => {
+    setCurrentStep('profile');
+  };
+
+  // Handle back to home
+  const handleBackToHome = () => {
+    setCurrentStep('home');
+  };
 
   const [attendanceRecords, setAttendanceRecords] = useState([
     { date: '2024-09-12', subject: 'Data Structures', status: 'present', time: '09:15 AM' },
@@ -474,11 +501,23 @@ const StudentDashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <button 
+                onClick={handleProfileView}
+                className="p-2 bg-white/70 rounded-xl border border-white/50 hover:bg-white/90 transition-all duration-300"
+              >
+                <User className="w-5 h-5 text-gray-600" />
+              </button>
               <button className="p-2 bg-white/70 rounded-xl border border-white/50 hover:bg-white/90 transition-all duration-300">
                 <Bell className="w-5 h-5 text-gray-600" />
               </button>
               <button className="p-2 bg-white/70 rounded-xl border border-white/50 hover:bg-white/90 transition-all duration-300">
                 <Settings className="w-5 h-5 text-gray-600" />
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="p-2 bg-red-100 rounded-xl border border-red-200 hover:bg-red-200 transition-all duration-300"
+              >
+                <LogOut className="w-5 h-5 text-red-600" />
               </button>
             </div>
           </div>
@@ -487,7 +526,11 @@ const StudentDashboard = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <HomeDashboard />
+        {currentStep === 'profile' ? (
+          <ProfilePage onBack={handleBackToHome} />
+        ) : (
+          <HomeDashboard />
+        )}
       </div>
 
       {/* Attendance Process Modals */}

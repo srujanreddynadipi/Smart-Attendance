@@ -1,6 +1,7 @@
 {
   "hosting": {
     "public": "build",
+    "site": "attendance-d7971-7a46f",
     "ignore": [
       "firebase.json",
       "**/.*",
