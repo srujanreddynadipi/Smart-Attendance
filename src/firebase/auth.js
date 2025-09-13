@@ -7,12 +7,26 @@ import {
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from './config';
 
+// Helper function to check if Firebase is properly configured
+const isFirebaseConfigured = () => {
+  try {
+    // Check if Firebase app is properly initialized
+    return auth && auth.app && auth.app.options && auth.app.options.apiKey !== "AIzaSyDevelopmentKeyForTesting123456789";
+  } catch {
+    return false;
+  }
+};
+
 // Register a new user
 export const registerUser = async (email, password, userData) => {
   try {
     console.log('🔥 Firebase Auth - Starting registration process');
     console.log('🔥 Auth instance:', auth);
-    console.log('🔥 Auth config exists:', !!auth.config);
+    
+    // Check if Firebase is properly configured
+    if (!isFirebaseConfigured()) {
+      throw new Error('Firebase is not properly configured. Please set up your Firebase project.');
+    }
     
     // Create user with email and password
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);

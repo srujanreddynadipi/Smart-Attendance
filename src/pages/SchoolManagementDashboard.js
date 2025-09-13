@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { LayoutDashboard, Users, BookOpen, BarChart2, GraduationCap, UserCheck, TrendingUp, Bell, Settings, Search, Upload, UserPlus, Trash2, Edit, Key, Check, CheckCircle, AlertCircle, Info, ChevronRight, FileText, Award, DollarSign, Activity, PieChart as PieChartLucide, Edit2, X } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, BarChart2, GraduationCap, UserCheck, TrendingUp, Bell, Settings, Search, Upload, UserPlus, Trash2, Edit, Key, Check, CheckCircle, AlertCircle, Info, ChevronRight, FileText, Award, DollarSign, Activity, PieChart as PieChartLucide, Edit2, X, LogOut, Plus, Download, ClipboardCheck } from 'lucide-react';
+import { registerUser, logoutUser } from '../firebase/auth';
+import { useAuth } from '../contexts/AuthContext';
 
-const SchoolManagementDashboard = () => {
+const SchoolManagementDashboard = ({ onLogout }) => {
+    const { userData } = useAuth();
     const [activeTab, setActiveTab] = useState('overview');
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
@@ -10,7 +13,22 @@ const SchoolManagementDashboard = () => {
     const [selectedUser, setSelectedUser] = useState(null);
     const [filterRole, setFilterRole] = useState('all');
     const [notification, setNotification] = useState('');
+    const [loading, setLoading] = useState(false);
     const fileInputRef = useRef(null);
+
+    // Form data for adding new users
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        phone: '',
+        class: '',
+        subject: '',
+        department: '',
+        employeeId: '',
+        designation: '',
+        address: ''
+    });
 
     // Sample data
     const [users, setUsers] = useState({
@@ -66,22 +84,46 @@ const SchoolManagementDashboard = () => {
         setModalType(type);
         setShowAddModal(true);
         setSelectedUser(null);
+        setFormData({
+            name: '',
+            email: '',
+            password: '',
+            phone: '',
+            class: '',
+            subject: '',
+            department: '',
+            employeeId: '',
+            designation: '',
+            address: ''
+        });
     };
 
     const handleEditUser = (user, type) => {
         setSelectedUser(user);
         setModalType(type);
         setShowAddModal(true);
+        setFormData({
+            name: user.name || '',
+            email: user.email || '',
+            password: '',
+            phone: user.phone || '',
+            class: user.class || '',
+            subject: user.subject || '',
+            department: user.department || '',
+            employeeId: user.id || '',
+            designation: user.designation || '',
+            address: user.address || ''
+        });
     };
 
     const handleDeleteUser = (userId, type) => {
-        // Custom confirmation modal should be used instead of window.confirm
-        console.log(`User ${userId} of type ${type} deletion confirmed.`);
-        setUsers(prev => ({
-            ...prev,
-            [type]: prev[type].filter(u => u.id !== userId)
-        }));
-        showNotification('User deleted successfully');
+        if (window.confirm('Are you sure you want to delete this user?')) {
+            setUsers(prev => ({
+                ...prev,
+                [type]: prev[type].filter(u => u.id !== userId)
+            }));
+            showNotification('User deleted successfully');
+        }
     };
 
     const handleApproveStudent = (studentId) => {
@@ -95,9 +137,137 @@ const SchoolManagementDashboard = () => {
     };
 
     const handleResetPassword = (userId) => {
-        // Custom modal should be used instead of window.confirm
-        console.log(`Password reset for user ${userId} confirmed.`);
-        showNotification('Password reset email sent');
+        if (window.confirm('Send password reset email to this user?')) {
+            showNotification('Password reset email sent');
+        }
+    };
+
+    const handleLogout = async () => {
+        try {
+            await logoutUser();
+            if (onLogout) {
+                onLogout();
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    };
+
+    const handleSubmitUser = async () => {
+        setLoading(true);
+        try {
+            if (!formData.name || !formData.email || (!selectedUser && !formData.password)) {
+                throw new Error('Please fill in all required fields');
+            }
+
+            if (modalType === 'teachers') {
+                // Create teacher account using Firebase
+                const teacherData = {
+                    name: formData.name,
+                    email: formData.email,
+                    role: 'teacher',
+                    phone: formData.phone,
+                    subject: formData.subject,
+                    department: formData.department,
+                    employeeId: formData.employeeId,
+                    designation: formData.designation,
+                    address: formData.address,
+                    dateOfJoining: new Date().toISOString().split('T')[0]
+                };
+
+                if (selectedUser) {
+                    // Update existing teacher
+                    setUsers(prev => ({
+                        ...prev,
+                        teachers: prev.teachers.map(t => 
+                            t.id === selectedUser.id 
+                                ? { ...t, ...teacherData, id: t.id }
+                                : t
+                        )
+                    }));
+                    showNotification('Teacher updated successfully');
+                } else {
+                    // Create new teacher
+                    await registerUser(formData.email, formData.password, teacherData);
+                    
+                    // Add to local state (in real app, you'd fetch from Firebase)
+                    const newTeacher = {
+                        id: 'T' + String(Date.now()).slice(-3),
+                        ...teacherData,
+                        classes: 0
+                    };
+                    
+                    setUsers(prev => ({
+                        ...prev,
+                        teachers: [...prev.teachers, newTeacher]
+                    }));
+                    showNotification('Teacher added successfully');
+                }
+            } else if (modalType === 'students') {
+                // Handle student creation/update
+                const studentData = {
+                    name: formData.name,
+                    email: formData.email,
+                    role: 'student',
+                    phone: formData.phone,
+                    class: formData.class,
+                    studentId: formData.employeeId || 'ST' + String(Date.now()).slice(-3)
+                };
+
+                if (selectedUser) {
+                    setUsers(prev => ({
+                        ...prev,
+                        students: prev.students.map(s => 
+                            s.id === selectedUser.id 
+                                ? { ...s, ...studentData, id: s.id }
+                                : s
+                        )
+                    }));
+                    showNotification('Student updated successfully');
+                } else {
+                    await registerUser(formData.email, formData.password, studentData);
+                    
+                    const newStudent = {
+                        id: studentData.studentId,
+                        ...studentData,
+                        status: 'approved',
+                        attendance: 0
+                    };
+                    
+                    setUsers(prev => ({
+                        ...prev,
+                        students: [...prev.students, newStudent]
+                    }));
+                    showNotification('Student added successfully');
+                }
+            }
+
+            setShowAddModal(false);
+            setFormData({
+                name: '',
+                email: '',
+                password: '',
+                phone: '',
+                class: '',
+                subject: '',
+                department: '',
+                employeeId: '',
+                designation: '',
+                address: ''
+            });
+        } catch (error) {
+            showNotification(error.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
     };
 
     const handleBulkUpload = () => {
@@ -134,7 +304,7 @@ const SchoolManagementDashboard = () => {
                         </div>
                         <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">+3</span>
                     </div>
-                    <h3 className="text-3xl font-bold text-gray-800">{analytics.totalTeachers}</h3>
+                    <h3 className="text-3xl font-bold text-gray-800">{users.teachers.length}</h3>
                     <p className="text-sm text-gray-600 mt-1">Total Teachers</p>
                 </div>
 
@@ -683,17 +853,17 @@ const SchoolManagementDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Quick Reports */}
                 {[
-                    { title: 'Attendance Report', icon: 'clipboard-check', color: 'blue', desc: 'Monthly attendance summary' },
-                    { title: 'Academic Performance', icon: 'trending-up', color: 'green', desc: 'Student grades analysis' },
-                    { title: 'Fee Collection', icon: 'dollar-sign', color: 'purple', desc: 'Payment status report' },
-                    { title: 'Teacher Performance', icon: 'award', color: 'amber', desc: 'Teaching effectiveness metrics' },
-                    { title: 'Student Progress', icon: 'activity', color: 'pink', desc: 'Individual progress tracking' },
-                    { title: 'Resource Utilization', icon: 'pie-chart', color: 'indigo', desc: 'Infrastructure usage stats' },
+                    { title: 'Attendance Report', IconComponent: ClipboardCheck, color: 'blue', desc: 'Monthly attendance summary' },
+                    { title: 'Academic Performance', IconComponent: TrendingUp, color: 'green', desc: 'Student grades analysis' },
+                    { title: 'Fee Collection', IconComponent: DollarSign, color: 'purple', desc: 'Payment status report' },
+                    { title: 'Teacher Performance', IconComponent: Award, color: 'amber', desc: 'Teaching effectiveness metrics' },
+                    { title: 'Student Progress', IconComponent: Activity, color: 'pink', desc: 'Individual progress tracking' },
+                    { title: 'Resource Utilization', IconComponent: PieChartLucide, color: 'indigo', desc: 'Infrastructure usage stats' },
                 ].map((report, idx) => (
                     <div key={idx} className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50 hover:shadow-2xl transition-all duration-300 cursor-pointer">
                         <div className="flex items-center gap-4 mb-4">
                             <div className={`w-12 h-12 bg-gradient-to-r from-${report.color}-100 to-${report.color}-200 rounded-xl flex items-center justify-center`}>
-                                <LucideIcon name={report.icon} className={`w-6 h-6 text-${report.color}-600`} />
+                                <report.IconComponent className={`w-6 h-6 text-${report.color}-600`} />
                             </div>
                             <div className="flex-1">
                                 <h3 className="font-bold text-gray-800">{report.title}</h3>
@@ -755,8 +925,15 @@ const SchoolManagementDashboard = () => {
                                 <Settings className="w-5 h-5 text-gray-600" />
                             </button>
                             <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl px-4 py-2 font-semibold">
-                                Admin
+                                {userData?.name || 'Admin'}
                             </div>
+                            <button 
+                                onClick={handleLogout}
+                                className="p-3 bg-red-100 rounded-xl border border-red-200 hover:bg-red-200 transition-all duration-300"
+                                title="Logout"
+                            >
+                                <LogOut className="w-5 h-5 text-red-600" />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -807,7 +984,7 @@ const SchoolManagementDashboard = () => {
                 {/* Add/Edit Modal */}
                 {showAddModal && (
                     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-slide-in">
+                        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-slide-in max-h-[90vh] overflow-y-auto">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-2xl font-bold text-gray-800">
                                     {selectedUser ? 'Edit' : 'Add'} {modalType.slice(0, -1)}
@@ -822,49 +999,119 @@ const SchoolManagementDashboard = () => {
                             <div className="space-y-4">
                                 <input
                                     type="text"
+                                    name="name"
                                     placeholder="Full Name"
+                                    value={formData.name}
+                                    onChange={handleInputChange}
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    defaultValue={selectedUser?.name || ''}
                                 />
                                 <input
                                     type="email"
+                                    name="email"
                                     placeholder="Email Address"
+                                    value={formData.email}
+                                    onChange={handleInputChange}
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    defaultValue={selectedUser?.email || ''}
                                 />
+                                {!selectedUser && (
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        placeholder="Password"
+                                        value={formData.password}
+                                        onChange={handleInputChange}
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                )}
+                                <input
+                                    type="text"
+                                    name="phone"
+                                    placeholder="Phone Number"
+                                    value={formData.phone}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                
                                 {modalType === 'students' && (
-                                    <input
-                                        type="text"
-                                        placeholder="Class"
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        defaultValue={selectedUser?.class || ''}
-                                    />
+                                    <>
+                                        <input
+                                            type="text"
+                                            name="class"
+                                            placeholder="Class (e.g., CS-301)"
+                                            value={formData.class}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="employeeId"
+                                            placeholder="Student ID (optional)"
+                                            value={formData.employeeId}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </>
                                 )}
+                                
                                 {modalType === 'teachers' && (
-                                    <input
-                                        type="text"
-                                        placeholder="Subject"
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        defaultValue={selectedUser?.subject || ''}
-                                    />
+                                    <>
+                                        <input
+                                            type="text"
+                                            name="subject"
+                                            placeholder="Subject/Department"
+                                            value={formData.subject}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="department"
+                                            placeholder="Department"
+                                            value={formData.department}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="employeeId"
+                                            placeholder="Employee ID"
+                                            value={formData.employeeId}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="designation"
+                                            placeholder="Designation (e.g., Professor, Lecturer)"
+                                            value={formData.designation}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </>
                                 )}
-                                {modalType === 'parents' && (
-                                    <input
-                                        type="text"
-                                        placeholder="Phone Number"
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        defaultValue={selectedUser?.phone || ''}
-                                    />
-                                )}
+                                
+                                <textarea
+                                    name="address"
+                                    placeholder="Address"
+                                    value={formData.address}
+                                    onChange={handleInputChange}
+                                    rows={3}
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                
                                 <div className="flex gap-3 mt-6">
                                     <button
-                                        onClick={() => {
-                                            showNotification(`${modalType.slice(0, -1)} ${selectedUser ? 'updated' : 'added'} successfully`);
-                                            setShowAddModal(false);
-                                        }}
-                                        className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300"
+                                        onClick={() => setShowAddModal(false)}
+                                        className="flex-1 bg-gray-500 text-white py-3 rounded-xl font-semibold hover:bg-gray-600 transition-all duration-300"
                                     >
-                                        {selectedUser ? 'Update' : 'Add'}
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSubmitUser}
+                                        disabled={loading}
+                                        className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 disabled:opacity-50"
+                                    >
+                                        {loading ? 'Processing...' : (selectedUser ? 'Update' : 'Add')}
                                     </button>
                                 </div>
                             </div>
@@ -876,4 +1123,4 @@ const SchoolManagementDashboard = () => {
     );
 };
 
-export default App;
+export default SchoolManagementDashboard;

@@ -9,7 +9,6 @@ import {
   Clock, 
   Scan,
   Eye,
-  BookOpen,
   Calendar,
   TrendingUp,
   Award,
@@ -21,10 +20,19 @@ import {
   Home,
   Users,
   Activity,
-  LogOut
+  LogOut,
+  BookOpen
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { logoutUser } from '../firebase/auth';
+import QRScanner from '../components/QRScanner';
+import FaceRecognition from '../components/FaceRecognition';
+import locationService from '../services/locationService';
+import { 
+  verifyQRCode, 
+  verifyLocationProximity, 
+  markAttendance 
+} from '../firebase/attendance';
 import ProfilePage from './ProfilePage';
 
 const StudentDashboard = ({ onLogout }) => {
@@ -85,7 +93,6 @@ const StudentDashboard = ({ onLogout }) => {
   ]);
 
   const videoRef = useRef(null);
-  const [cameraActive, setCameraActive] = useState(false);
 
   // Calculate attendance percentage
   const attendanceStats = {
@@ -101,111 +108,176 @@ const StudentDashboard = ({ onLogout }) => {
 
   // Start QR Scanner
   const startQRScanner = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setCameraActive(true);
-      setCurrentStep('scan');
+    setCurrentStep('scan');
+  };
 
-      // Simulate QR scan after 3 seconds
-      setTimeout(() => {
-        setAttendanceProcess(prev => ({
-          ...prev,
-          qrScanned: true,
-          sessionData: {
-            sessionId: 'ABC123XYZ',
-            teacher: 'Prof. Anderson',
-            subject: 'Data Structures',
-            class: 'CS-301',
-            timestamp: new Date().toISOString()
-          }
-        }));
-        stopCamera();
-        setCurrentStep('location');
-        verifyLocation();
-      }, 3000);
-    } catch (error) {
-      alert('Camera access denied. Please enable camera permissions.');
+  // Handle QR scan success
+  const handleQRScanSuccess = async (sessionData) => {
+    console.log('📱 QR scan successful, raw data:', sessionData);
+    
+    let parsedSessionData;
+    try {
+      // Parse the QR data if it's a string
+      parsedSessionData = typeof sessionData === 'string' ? JSON.parse(sessionData) : sessionData;
+      console.log('📊 Parsed session data:', parsedSessionData);
+    } catch (parseError) {
+      console.error('❌ Error parsing QR data:', parseError);
+      alert('Invalid QR code data. Please scan a valid attendance QR code.');
+      setCurrentStep('home');
+      return;
     }
+
+    // Validate session data structure
+    if (!parsedSessionData.sessionId || !parsedSessionData.location) {
+      console.error('❌ Invalid session data structure:', parsedSessionData);
+      alert('Invalid QR code. Missing session or location data.');
+      setCurrentStep('home');
+      return;
+    }
+
+    console.log('✅ QR data validation passed');
+    setAttendanceProcess(prev => ({
+      ...prev,
+      qrScanned: true,
+      sessionData: parsedSessionData
+    }));
+    setCurrentStep('location');
+    await verifyLocation();
+  };
+
+  // Handle QR scan error
+  const handleQRScanError = (error) => {
+    console.error('QR scan error:', error);
+    alert('Failed to scan QR code. Please try again.');
+    setCurrentStep('home');
   };
 
   // Verify Location
-  const verifyLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        // Simulate location verification
-        setTimeout(() => {
-          setAttendanceProcess(prev => ({
-            ...prev,
-            locationVerified: true
-          }));
-          setCurrentStep('face');
-        }, 2000);
-      },
-      (error) => {
-        alert('Location access denied. Please enable location permissions.');
-      }
-    );
-  };
-
-  // Start Face Recognition
-  const startFaceRecognition = async () => {
+  const verifyLocation = async () => {
+    console.log('🏫 Starting location verification...');
+    
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      // First, request location permission explicitly
+      console.log('🔐 Requesting location permission...');
+      try {
+        await locationService.requestLocationPermission();
+        console.log('✅ Location permission granted');
+      } catch (permissionError) {
+        console.error('❌ Location permission error:', permissionError.message);
+        alert(permissionError.message);
+        setCurrentStep('home');
+        return;
       }
-      setCameraActive(true);
 
-      // Simulate face recognition after 3 seconds
-      setTimeout(() => {
+      // Then get the student's current location
+      console.log('📍 Getting student location...');
+      const studentLocation = await locationService.getCurrentPosition();
+      console.log('✅ Student location obtained:', studentLocation);
+      
+      // Compare with the session location
+      const sessionLocation = attendanceProcess.sessionData.location;
+      console.log('🎯 Session location:', sessionLocation);
+      
+      const verificationResult = locationService.verifyLocation(
+        studentLocation,
+        sessionLocation,
+        100 // 100 meter tolerance
+      );
+      
+      console.log('📏 Distance verification result:', verificationResult);
+      
+      if (verificationResult.isValid) {
+        console.log('✅ Location verification successful');
         setAttendanceProcess(prev => ({
           ...prev,
-          faceVerified: true
+          locationVerified: true,
+          studentLocation: studentLocation
         }));
-        stopCamera();
-        markAttendance();
-      }, 3000);
+        setCurrentStep('face');
+      } else {
+        console.log('❌ Location verification failed - too far away');
+        alert(`You are ${verificationResult.distance}m away from the class location. Please move closer (within ${verificationResult.tolerance}m).`);
+        setCurrentStep('home');
+      }
     } catch (error) {
-      alert('Camera access denied for face recognition.');
+      console.error('❌ Location verification error:', error);
+      if (error.message.includes('denied')) {
+        alert('Location access denied. Please enable location permissions in your browser settings and try again.');
+      } else if (error.message.includes('unavailable')) {
+        alert('Location information unavailable. Please check your GPS and try again.');
+      } else if (error.message.includes('timeout')) {
+        alert('Location request timed out. Please try again.');
+      } else {
+        alert('Location verification failed. Please ensure location is enabled and try again.');
+      }
+      setCurrentStep('home');
     }
   };
 
-  // Stop Camera
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-    }
-    setCameraActive(false);
+  // Handle face recognition success
+  const handleFaceRecognitionSuccess = () => {
+    setAttendanceProcess(prev => ({
+      ...prev,
+      faceVerified: true
+    }));
+    markStudentAttendance();
   };
+
+  // Handle face recognition error
+  const handleFaceRecognitionError = (error) => {
+    console.error('Face recognition error:', error);
+    alert('Face recognition failed. Please try again.');
+    setCurrentStep('home');
+  };
+
+
 
   // Mark Attendance
-  const markAttendance = () => {
-    // Add new attendance record
-    const newRecord = {
-      date: new Date().toISOString().split('T')[0],
-      subject: attendanceProcess.sessionData.subject,
-      status: 'present',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+  const markStudentAttendance = async () => {
+    try {
+      // Save attendance to Firebase
+      await markAttendance(
+        attendanceProcess.sessionData.sessionId,
+        {
+          studentName: userData.name || studentData.name,
+          studentId: userData.studentId || studentData.id,
+          studentUid: userData.uid
+        },
+        {
+          timestamp: new Date().toISOString(),
+          status: 'present',
+          qrVerified: true,
+          locationVerified: true,
+          faceVerified: true
+        }
+      );
 
-    setAttendanceRecords(prev => [newRecord, ...prev]);
-    setCurrentStep('success');
+      // Add new attendance record to local state
+      const newRecord = {
+        date: new Date().toISOString().split('T')[0],
+        subject: attendanceProcess.sessionData.subject,
+        status: 'present',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
 
-    // Reset after 3 seconds
-    setTimeout(() => {
+      setAttendanceRecords(prev => [newRecord, ...prev]);
+      setCurrentStep('success');
+
+      // Reset after 3 seconds
+      setTimeout(() => {
+        setCurrentStep('home');
+        setAttendanceProcess({
+          qrScanned: false,
+          locationVerified: false,
+          faceVerified: false,
+          sessionData: null
+        });
+      }, 3000);
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      alert('Failed to mark attendance. Please try again.');
       setCurrentStep('home');
-      setAttendanceProcess({
-        qrScanned: false,
-        locationVerified: false,
-        faceVerified: false,
-        sessionData: null
-      });
-    }, 3000);
+    }
   };
 
   // Home Dashboard
@@ -373,21 +445,11 @@ const StudentDashboard = ({ onLogout }) => {
               <h3 className="text-xl font-bold text-gray-800">Scanning QR Code</h3>
               <p className="text-gray-600">Point camera at teacher's QR code</p>
             </div>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="w-full h-64 bg-gray-900 rounded-2xl mb-4"
+            <QRScanner
+              onScanSuccess={handleQRScanSuccess}
+              onScanError={handleQRScanError}
+              onCancel={() => setCurrentStep('home')}
             />
-            <button
-              onClick={() => {
-                stopCamera();
-                setCurrentStep('home');
-              }}
-              className="w-full bg-gray-500 text-white py-3 rounded-xl font-semibold"
-            >
-              Cancel
-            </button>
           </div>
         </div>
       );
@@ -432,21 +494,11 @@ const StudentDashboard = ({ onLogout }) => {
                 <span className="text-sm">Location Verified</span>
               </div>
             </div>
-            <button
-              onClick={startFaceRecognition}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 mb-3"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <Camera className="w-5 h-5" />
-                Start Face Recognition
-              </div>
-            </button>
-            <button
-              onClick={() => setCurrentStep('home')}
-              className="w-full bg-gray-500 text-white py-3 rounded-xl"
-            >
-              Cancel
-            </button>
+            <FaceRecognition
+              onRecognitionSuccess={handleFaceRecognitionSuccess}
+              onRecognitionError={handleFaceRecognitionError}
+              onCancel={() => setCurrentStep('home')}
+            />
           </div>
         </div>
       );
@@ -535,27 +587,6 @@ const StudentDashboard = ({ onLogout }) => {
 
       {/* Attendance Process Modals */}
       <AttendanceSteps />
-
-      {/* Camera for face recognition */}
-      {cameraActive && currentStep === 'face' && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full mx-4">
-            <div className="text-center mb-4">
-              <h3 className="text-xl font-bold text-gray-800">Face Recognition Active</h3>
-              <p className="text-gray-600">Analyzing facial features...</p>
-            </div>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="w-full h-64 bg-gray-900 rounded-2xl mb-4"
-            />
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

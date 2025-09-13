@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { 
   User, 
   GraduationCap, 
@@ -25,7 +25,8 @@ import {
 } from 'lucide-react';
 import { registerUser } from '../firebase/auth';
 
-const RegisterPage = ({ onRegister, onNavigateToLogin }) => {
+const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
+  // console.log('RegisterPage is re-rendering...'); // You can remove this line now
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -799,7 +800,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin }) => {
       case 3: return <AcademicStep />;
       case 4: return <AccountStep />;
       case 5: return <EmergencyStep />;
-      case 6: return <ReviewStep />;
+      case 6: return <ReviewStep key="review-step" />;
       default: return <PersonalInfoStep />;
     }
   };
@@ -966,4 +967,4 @@ const RegisterPage = ({ onRegister, onNavigateToLogin }) => {
   );
 };
 
-export default RegisterPage;
+export default memo(RegisterPage);

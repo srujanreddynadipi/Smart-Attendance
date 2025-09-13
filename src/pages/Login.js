@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   User, 
   GraduationCap, 
@@ -18,6 +19,7 @@ import {
 import { loginUser } from '../firebase/auth';
 
 const Login = ({ onLogin, onNavigateToRegister }) => {
+  const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState('student');
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -94,6 +96,15 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
       if (result.success) {
         // Check if user role matches selected type
         if (result.user.role === selectedRole) {
+          // Navigate to appropriate dashboard based on role
+          if (result.user.role === 'teacher') {
+            navigate('/teacher');
+          } else if (result.user.role === 'student') {
+            navigate('/student');
+          } else if (result.user.role === 'admin') {
+            navigate('/admin');
+          }
+          
           if (onLogin) {
             onLogin(result.user);
           }
@@ -305,14 +316,17 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
                     </p>
                     <div className="flex justify-center gap-4">
                       <button 
-                        onClick={() => onNavigateToRegister && onNavigateToRegister()}
+                        onClick={() => navigate('/register')}
                         className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
                       >
                         Register as Student
                       </button>
                       <span className="text-gray-300">|</span>
-                      <button className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors">
-                        Contact Admin
+                      <button 
+                        onClick={() => navigate('/workflow-test')}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                      >
+                        Workflow Test
                       </button>
                     </div>
                   </div>

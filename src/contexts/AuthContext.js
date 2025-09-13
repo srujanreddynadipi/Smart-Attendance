@@ -17,17 +17,22 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setCurrentUser(user);
-        
-        // Get user data from Firestore
+        // Fetch user data from Firestore
         const result = await getCurrentUserData(user.uid);
         if (result.success) {
-          setUserData(result.userData);
+          // Set all state at once to minimize re-renders
+          setCurrentUser(user);
+          setUserData({
+            ...result.userData,
+            uid: user.uid
+          });
         }
       } else {
+        // Clear all state at once
         setCurrentUser(null);
         setUserData(null);
       }
+      // Set loading to false only after all state is handled
       setLoading(false);
     });
 
