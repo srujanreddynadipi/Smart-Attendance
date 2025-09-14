@@ -142,7 +142,7 @@ const StudentDashboard = ({ onLogout }) => {
       sessionData: parsedSessionData
     }));
     setCurrentStep('location');
-    await verifyLocation();
+    await verifyLocation(parsedSessionData); // Pass session data directly
   };
 
   // Handle QR scan error
@@ -153,7 +153,7 @@ const StudentDashboard = ({ onLogout }) => {
   };
 
   // Verify Location
-  const verifyLocation = async () => {
+  const verifyLocation = async (sessionData = null) => {
     console.log('🏫 Starting location verification...');
     
     try {
@@ -174,14 +174,22 @@ const StudentDashboard = ({ onLogout }) => {
       const studentLocation = await locationService.getCurrentPosition();
       console.log('✅ Student location obtained:', studentLocation);
       
-      // Compare with the session location
-      const sessionLocation = attendanceProcess.sessionData.location;
+      // Get session location from parameter or state
+      const sessionLocation = sessionData ? sessionData.location : attendanceProcess.sessionData?.location;
+      
+      if (!sessionLocation) {
+        console.error('❌ Session location not available');
+        alert('Session location data not found. Please try scanning the QR code again.');
+        setCurrentStep('home');
+        return;
+      }
+      
       console.log('🎯 Session location:', sessionLocation);
       
       const verificationResult = locationService.verifyLocation(
         studentLocation,
         sessionLocation,
-        100 // 100 meter tolerance
+        100 // 100 meter tolerance - reasonable for GPS accuracy
       );
       
       console.log('📏 Distance verification result:', verificationResult);
@@ -191,12 +199,29 @@ const StudentDashboard = ({ onLogout }) => {
         setAttendanceProcess(prev => ({
           ...prev,
           locationVerified: true,
-          studentLocation: studentLocation
+          studentLocation: studentLocation,
+          sessionData: sessionData || prev.sessionData // Use passed sessionData if available
         }));
         setCurrentStep('face');
       } else {
         console.log('❌ Location verification failed - too far away');
-        alert(`You are ${verificationResult.distance}m away from the class location. Please move closer (within ${verificationResult.tolerance}m).`);
+        console.log('🗺️ Detailed location info:');
+        console.log('   Student coordinates:', `${studentLocation.latitude}, ${studentLocation.longitude}`);
+        console.log('   Session coordinates:', `${sessionLocation.latitude}, ${sessionLocation.longitude}`);
+        console.log('   Distance calculated:', `${verificationResult.distance}m`);
+        console.log('   Tolerance allowed:', `${verificationResult.tolerance}m`);
+        console.log('   GPS accuracy:', `${studentLocation.accuracy}m`);
+        
+        // Show detailed error message
+        alert(
+          `Location Verification Failed\n\n` +
+          `Calculated distance: ${verificationResult.distance}m\n` +
+          `Tolerance used: ${verificationResult.tolerance}m\n` +
+          `GPS accuracy: ±${Math.round(studentLocation.accuracy)}m\n` +
+          `Base tolerance: ${verificationResult.baseToleranceUsed}m\n\n` +
+          `Note: Tolerance was ${verificationResult.gpsAccuracyConsidered > verificationResult.baseToleranceUsed ? 'adjusted for GPS accuracy' : 'kept at base value'}\n\n` +
+          `Please ensure you are in the correct classroom location.`
+        );
         setCurrentStep('home');
       }
     } catch (error) {

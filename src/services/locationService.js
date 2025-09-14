@@ -157,7 +157,14 @@ export const locationService = {
       lat: classLocation.latitude,
       lon: classLocation.longitude
     });
-    console.log('📐 Tolerance:', toleranceMeters + 'm');
+    
+    // Adjust tolerance based on GPS accuracy
+    const gpsAccuracy = studentLocation.accuracy || 0;
+    const adjustedTolerance = Math.max(toleranceMeters, gpsAccuracy * 2); // Use 2x GPS accuracy or base tolerance, whichever is higher
+    
+    console.log('📐 Base tolerance:', toleranceMeters + 'm');
+    console.log('📱 GPS accuracy:', gpsAccuracy + 'm');
+    console.log('📐 Adjusted tolerance:', adjustedTolerance + 'm');
 
     const distance = locationService.calculateDistance(
       studentLocation.latitude,
@@ -167,10 +174,12 @@ export const locationService = {
     );
 
     const result = {
-      isValid: distance <= toleranceMeters,
+      isValid: distance <= adjustedTolerance,
       distance: Math.round(distance),
-      tolerance: toleranceMeters,
-      accuracy: studentLocation.accuracy
+      tolerance: Math.round(adjustedTolerance),
+      accuracy: studentLocation.accuracy,
+      baseToleranceUsed: toleranceMeters,
+      gpsAccuracyConsidered: gpsAccuracy
     };
 
     console.log('📊 Distance calculation result:', result);
