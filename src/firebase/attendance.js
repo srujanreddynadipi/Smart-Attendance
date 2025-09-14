@@ -250,8 +250,11 @@ export const markAttendance = async (sessionId, studentData, verificationData) =
       status: 'present'
     };
     
+    console.log('💾 Creating attendance record:', attendanceRecord);
+    
     // Add to attendance records collection
-    await addDoc(collection(db, 'attendanceRecords'), attendanceRecord);
+    const docRef = await addDoc(collection(db, 'attendanceRecords'), attendanceRecord);
+    console.log('✅ Attendance record saved with ID:', docRef.id);
     
     // Update session with new attendee
     await updateDoc(doc(db, 'attendanceSessions', sessionDoc.id), {
@@ -264,9 +267,12 @@ export const markAttendance = async (sessionId, studentData, verificationData) =
       attendeeCount: (sessionData.attendeeCount || 0) + 1
     });
     
+    console.log('✅ Session updated with new attendee');
+    
     return {
       success: true,
-      message: 'Attendance marked successfully!'
+      message: 'Attendance marked successfully!',
+      recordId: docRef.id
     };
   } catch (error) {
     console.error('Error marking attendance:', error);
@@ -311,31 +317,46 @@ export const endAttendanceSession = async (sessionId) => {
 // Get attendance records for a session
 export const getSessionAttendance = async (sessionId) => {
   try {
+    console.log('🔍 Getting attendance for sessionId:', sessionId);
+    
     const q = query(
       collection(db, 'attendanceRecords'),
-      where('sessionId', '==', sessionId),
-      orderBy('markedAt', 'desc')
+      where('sessionId', '==', sessionId)
     );
     
     const querySnapshot = await getDocs(q);
     const records = [];
     
+    console.log('📊 Found', querySnapshot.size, 'attendance records');
+    
     querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      console.log('📝 Attendance record:', data);
       records.push({
         id: doc.id,
-        ...doc.data()
+        ...data
       });
     });
+    
+    // Sort records by markedAt in JavaScript instead of Firestore
+    records.sort((a, b) => {
+      const aTime = a.markedAt?.toDate?.() || new Date(a.markedAt);
+      const bTime = b.markedAt?.toDate?.() || new Date(b.markedAt);
+      return bTime - aTime; // Descending order (newest first)
+    });
+    
+    console.log('✅ Returning', records.length, 'sorted attendance records');
     
     return {
       success: true,
       records
     };
   } catch (error) {
-    console.error('Error getting session attendance:', error);
+    console.error('❌ Error getting session attendance:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
+      records: []
     };
   }
 };

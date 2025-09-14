@@ -76,21 +76,6 @@ const TeacherDashboard = ({ onLogout }) => {
     }
   }, [userData]);
 
-  // Auto-refresh attendance for selected session
-  useEffect(() => {
-    if (selectedSession?.sessionId) {
-      // Initial load
-      loadSessionAttendance(selectedSession.sessionId);
-      
-      // Auto-refresh attendance every 10 seconds for selected session
-      const attendanceInterval = setInterval(() => {
-        loadSessionAttendance(selectedSession.sessionId);
-      }, 10000);
-      
-      return () => clearInterval(attendanceInterval);
-    }
-  }, [selectedSession]);
-
   const loadActiveSessions = async () => {
     setLoading(true);
     try {
@@ -108,18 +93,12 @@ const TeacherDashboard = ({ onLogout }) => {
 
   const loadSessionAttendance = async (sessionId) => {
     try {
-      console.log('🔄 Loading attendance for session:', sessionId);
       const result = await getSessionAttendance(sessionId);
       if (result.success) {
-        console.log('✅ Loaded attendance records:', result.records);
         setSessionAttendance(result.records);
-      } else {
-        console.error('❌ Failed to load attendance:', result.error);
-        setError(result.error);
       }
     } catch (error) {
-      console.error('❌ Failed to load attendance:', error);
-      setError('Failed to load attendance data');
+      console.error('Failed to load attendance:', error);
     }
   };
 
