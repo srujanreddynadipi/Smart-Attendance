@@ -18,8 +18,10 @@ import {
   Settings,
   LogOut,
   Eye,
-  StopCircle
+  StopCircle,
+  School
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { logoutUser } from '../firebase/auth';
 import QRGenerator from '../components/QRGenerator';
@@ -28,13 +30,16 @@ import {
   endAttendanceSession, 
   getSessionAttendance 
 } from '../firebase/attendance';
+import { getTeacherClassrooms } from '../firebase/classrooms';
 
 const TeacherDashboard = ({ onLogout }) => {
   const { userData } = useAuth();
+  const navigate = useNavigate();
   const [showQRGenerator, setShowQRGenerator] = useState(false);
   const [activeSessions, setActiveSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [sessionAttendance, setSessionAttendance] = useState([]);
+  const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -69,6 +74,7 @@ const TeacherDashboard = ({ onLogout }) => {
   useEffect(() => {
     if (userData?.uid) {
       loadActiveSessions();
+      loadClassrooms();
       
       // Auto-refresh sessions every 30 seconds
       const interval = setInterval(loadActiveSessions, 30000);
@@ -104,6 +110,21 @@ const TeacherDashboard = ({ onLogout }) => {
       setError('Failed to load sessions');
     }
     setLoading(false);
+  };
+
+  const loadClassrooms = async () => {
+    try {
+      console.log('Loading classrooms for teacher dashboard');
+      const result = await getTeacherClassrooms(userData.uid);
+      if (result.success) {
+        setClassrooms(result.classrooms);
+        console.log('Classrooms loaded:', result.classrooms);
+      } else {
+        console.error('Failed to load classrooms:', result.error);
+      }
+    } catch (error) {
+      console.error('Error loading classrooms:', error);
+    }
   };
 
   const loadSessionAttendance = async (sessionId) => {
@@ -239,6 +260,16 @@ const TeacherDashboard = ({ onLogout }) => {
                 <div className="flex items-center justify-center gap-2">
                   <QrCode className="w-5 h-5" />
                   Generate QR Code
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate('/teacher/classrooms')}
+                className="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white py-4 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <School className="w-5 h-5" />
+                  Manage Classrooms
                 </div>
               </button>
             </div>
@@ -480,6 +511,77 @@ const TeacherDashboard = ({ onLogout }) => {
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* My Classrooms Section */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h3 className="text-2xl font-bold text-gray-800">My Classrooms</h3>
+            <p className="text-gray-600">Click on a classroom to view details and manage subjects</p>
+          </div>
+          <button
+            onClick={() => navigate('/teacher/classrooms')}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add New
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {classrooms.map((classroom) => (
+            <div 
+              key={classroom.id} 
+              onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
+              className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer group"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-100 to-blue-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <School className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+              
+              <h4 className="text-xl font-bold text-gray-800 mb-2">{classroom.name}</h4>
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Code:</span>
+                  <span className="font-mono font-semibold text-blue-600">{classroom.code || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Students:</span>
+                  <span className="font-semibold text-gray-800">{classroom.studentCount || 0}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Subjects:</span>
+                  <span className="font-semibold text-gray-800">{classroom.subjects?.length || 0}</span>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Academic Year</span>
+                  <span>{classroom.academicYear || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {classrooms.length === 0 && (
+            <div className="col-span-full text-center py-16">
+              <School className="w-20 h-20 text-gray-300 mx-auto mb-6" />
+              <h4 className="text-xl font-semibold text-gray-600 mb-2">No Classrooms Yet</h4>
+              <p className="text-gray-500 mb-6">Create your first classroom to get started</p>
+              <button
+                onClick={() => navigate('/teacher/classrooms')}
+                className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300"
+              >
+                Create Classroom
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

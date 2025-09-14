@@ -5,6 +5,8 @@ import Login from './pages/Login';
 import RegisterPage from './pages/RegisterPage';
 import TeacherDashboard from './pages/TeacherDashboard';
 import StudentDashboard from './pages/StudentDashboard';
+import ClassroomManagement from './pages/ClassroomManagement';
+import ClassroomDetails from './pages/ClassroomDetails';
 import WorkflowTest from './pages/WorkflowTest';
 import SchoolManagementDashboard from './pages/SchoolManagementDashboard';
 
@@ -78,6 +80,18 @@ function AppContent() {
       <Route path="/teacher" element={
         <ProtectedRoute requiredRole="teacher">
           <TeacherDashboard onLogout={handleLogout} />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/teacher/classrooms" element={
+        <ProtectedRoute requiredRole="teacher">
+          <ClassroomManagement />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/teacher/classroom/:classroomId" element={
+        <ProtectedRoute requiredRole="teacher">
+          <ClassroomDetails />
         </ProtectedRoute>
       } />
       

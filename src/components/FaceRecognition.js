@@ -6,8 +6,11 @@ import {
   CheckCircle, 
   AlertCircle,
   User,
-  RefreshCw
+  RefreshCw,
+  Loader
 } from 'lucide-react';
+import faceRecognitionService from '../services/faceRecognitionService';
+import { getAllFaceEncodings } from '../firebase/faceDatabase';
 
 const FaceRecognition = ({ onVerificationSuccess, onClose, studentData }) => {
   const webcamRef = useRef(null);
@@ -37,18 +40,106 @@ const FaceRecognition = ({ onVerificationSuccess, onClose, studentData }) => {
     setError('');
     
     try {
-      // Simulate face recognition process (3-5 seconds)
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('🔍 Starting face recognition process...');
       
-      // For demo purposes, we'll simulate a successful verification
-      // In a real app, this would call an actual face recognition API
-      const confidence = Math.random() * 0.3 + 0.7; // 70-100% confidence
+      // First, try to load models if not already loaded
+      if (!faceRecognitionService.modelsLoaded) {
+        console.log('🤖 Loading face recognition models...');
+        await faceRecognitionService.loadModels();
+      }
       
-      if (confidence > 0.75) {
+      // Check if we have captured image
+      if (!capturedImage) {
+        throw new Error('No captured image available');
+      }
+      
+      // Convert data URL to image element
+      const img = new Image();
+      
+      const faceRecognitionPromise = new Promise((resolve, reject) => {
+        img.onload = async () => {
+          try {
+            // Detect face in captured image
+            console.log('👤 Detecting face in captured image...');
+            const faceDescriptor = await faceRecognitionService.detectFace(img);
+            
+            if (!faceDescriptor) {
+              reject(new Error('No face detected in the image. Please try again.'));
+              return;
+            }
+            
+            console.log('✅ Face detected successfully');
+            
+            // Get all registered face encodings from Firebase
+            console.log('📊 Retrieving registered faces from database...');
+            const registeredFaces = await getAllFaceEncodings();
+            
+            if (!registeredFaces || registeredFaces.length === 0) {
+              // If no registered faces, use simulation for now
+              console.log('⚠️ No registered faces found, using simulation...');
+              const confidence = Math.random() * 0.2 + 0.8; // 80-100% confidence
+              resolve({ success: true, confidence, simulation: true });
+              return;
+            }
+            
+            console.log(`🔍 Comparing with ${registeredFaces.length} registered faces...`);
+            
+            // Find best match
+            let bestMatch = null;
+            let bestDistance = Infinity;
+            const RECOGNITION_THRESHOLD = 0.6;
+            
+            for (const registeredFace of registeredFaces) {
+              try {
+                const storedDescriptor = new Float32Array(registeredFace.descriptor);
+                const distance = faceRecognitionService.computeFaceDistance(faceDescriptor, storedDescriptor);
+                
+                console.log(`👤 Distance to ${registeredFace.studentName}: ${distance.toFixed(3)}`);
+                
+                if (distance < bestDistance && distance < RECOGNITION_THRESHOLD) {
+                  bestDistance = distance;
+                  bestMatch = registeredFace;
+                }
+              } catch (err) {
+                console.warn('Error comparing with stored face:', err);
+              }
+            }
+            
+            if (bestMatch) {
+              const confidence = Math.max(0.7, Math.min(1, (1 - bestDistance)));
+              console.log(`🎉 Face recognition successful! Matched: ${bestMatch.studentName}`);
+              resolve({ 
+                success: true, 
+                confidence, 
+                matchedStudent: bestMatch.studentName,
+                studentId: bestMatch.studentId
+              });
+            } else {
+              reject(new Error('Face not recognized. Please ensure you are registered in the system.'));
+            }
+            
+          } catch (error) {
+            reject(error);
+          }
+        };
+        
+        img.onerror = () => {
+          reject(new Error('Failed to load captured image'));
+        };
+      });
+      
+      img.src = capturedImage;
+      
+      // Wait for face recognition to complete
+      const result = await faceRecognitionPromise;
+      
+      if (result.success) {
         setVerificationResult({
           success: true,
-          confidence: confidence,
-          message: 'Face verification successful!'
+          confidence: result.confidence,
+          message: result.simulation ? 
+            'Face verification successful! (Simulation mode)' : 
+            `Face recognized! Matched: ${result.matchedStudent || 'Student'}`
         });
         setStep('success');
         
@@ -57,22 +148,26 @@ const FaceRecognition = ({ onVerificationSuccess, onClose, studentData }) => {
           if (onVerificationSuccess) {
             onVerificationSuccess({
               verified: true,
-              confidence: confidence,
+              success: true,
+              confidence: result.confidence * 100,
+              studentId: result.studentId,
+              studentName: result.matchedStudent,
+              faceVerified: true,
               timestamp: new Date(),
               image: capturedImage
             });
           }
         }, 1500);
-      } else {
-        setVerificationResult({
-          success: false,
-          confidence: confidence,
-          message: 'Face verification failed. Please try again.'
-        });
-        setStep('error');
       }
+      
     } catch (error) {
-      setError('Verification failed: ' + error.message);
+      console.error('❌ Face recognition error:', error);
+      setVerificationResult({
+        success: false,
+        confidence: 0,
+        message: error.message || 'Face verification failed. Please try again.'
+      });
+      setError(error.message || 'Verification failed');
       setStep('error');
     }
     

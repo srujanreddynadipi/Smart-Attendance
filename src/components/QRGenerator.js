@@ -16,7 +16,7 @@ import {
 import { createAttendanceSession, getTeacherSessions, endAttendanceSession } from '../firebase/attendance';
 import { useAuth } from '../contexts/AuthContext';
 
-const QRGenerator = ({ onClose }) => {
+const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
   const { userData } = useAuth();
   const [step, setStep] = useState('form'); // form, generating, generated, error
   const [loading, setLoading] = useState(false);
@@ -28,7 +28,9 @@ const QRGenerator = ({ onClose }) => {
   const canvasRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    subject: '',
+    subject: subjectData?.name || '',
+    subjectCode: subjectData?.code || '',
+    classroomId: classroomId || '',
     latitude: '',
     longitude: '',
     address: '',
@@ -182,8 +184,12 @@ const QRGenerator = ({ onClose }) => {
                 <QrCode className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-800">Generate Attendance QR</h2>
-                <p className="text-sm text-gray-600">Create QR code for class attendance</p>
+                <h2 className="text-xl font-bold text-gray-800">
+                  {subjectData ? `Generate QR - ${subjectData.name}` : 'Generate Attendance QR'}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {subjectData ? `Create QR code for ${subjectData.code} attendance` : 'Create QR code for class attendance'}
+                </p>
               </div>
             </div>
             <button

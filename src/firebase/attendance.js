@@ -392,3 +392,281 @@ export const getStudentAttendance = async (studentId) => {
     };
   }
 };
+
+// Get student's recent attendance with subject details
+export const getStudentRecentAttendance = async (studentId, limit = 5) => {
+  try {
+    const q = query(
+      collection(db, 'attendanceRecords'),
+      where('studentId', '==', studentId),
+      orderBy('markedAt', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const records = [];
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      records.push({
+        id: doc.id,
+        subject: data.subject || 'Unknown Subject',
+        date: data.markedAt?.toDate?.() || new Date(data.markedAt),
+        time: data.markedAt?.toDate?.()?.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }) || new Date(data.markedAt).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }),
+        status: data.status || 'Present',
+        sessionData: data.sessionData
+      });
+    });
+    
+    return {
+      success: true,
+      records: records.slice(0, limit)
+    };
+  } catch (error) {
+    console.error('Error getting student recent attendance:', error);
+    return {
+      success: false,
+      error: error.message,
+      records: []
+    };
+  }
+};
+
+// Get student's subject performance/grades
+export const getStudentSubjectPerformance = async (studentId) => {
+  try {
+    // First get attendance records to calculate attendance percentage per subject
+    const attendanceQuery = query(
+      collection(db, 'attendanceRecords'),
+      where('studentId', '==', studentId)
+    );
+    
+    const attendanceSnapshot = await getDocs(attendanceQuery);
+    const subjectStats = {};
+    
+    // Calculate attendance stats per subject
+    attendanceSnapshot.forEach((doc) => {
+      const data = doc.data();
+      const subject = data.subject || 'Unknown Subject';
+      
+      if (!subjectStats[subject]) {
+        subjectStats[subject] = {
+          total: 0,
+          present: 0,
+          absent: 0,
+          late: 0
+        };
+      }
+      
+      subjectStats[subject].total++;
+      if (data.status === 'Present') {
+        subjectStats[subject].present++;
+      } else if (data.status === 'Absent') {
+        subjectStats[subject].absent++;
+      } else if (data.status === 'Late') {
+        subjectStats[subject].late++;
+      }
+    });
+    
+    // Try to get grades from a separate grades collection
+    const gradesQuery = query(
+      collection(db, 'studentGrades'),
+      where('studentId', '==', studentId)
+    );
+    
+    const gradesSnapshot = await getDocs(gradesQuery);
+    const grades = {};
+    
+    gradesSnapshot.forEach((doc) => {
+      const data = doc.data();
+      grades[data.subject] = {
+        grade: data.grade,
+        percentage: data.percentage,
+        lastUpdated: data.lastUpdated
+      };
+    });
+    
+    // Combine attendance and grades data
+    const performanceData = [];
+    
+    Object.keys(subjectStats).forEach(subject => {
+      const stats = subjectStats[subject];
+      const attendancePercentage = Math.round((stats.present / stats.total) * 100);
+      
+      // Get grade info if available, otherwise use attendance-based performance
+      const gradeInfo = grades[subject];
+      let performanceGrade = 'B'; // Default grade
+      let performancePercentage = attendancePercentage;
+      
+      if (gradeInfo) {
+        performanceGrade = gradeInfo.grade;
+        performancePercentage = gradeInfo.percentage;
+      } else {
+        // Calculate grade based on attendance
+        if (attendancePercentage >= 90) performanceGrade = 'A+';
+        else if (attendancePercentage >= 85) performanceGrade = 'A';
+        else if (attendancePercentage >= 80) performanceGrade = 'B+';
+        else if (attendancePercentage >= 75) performanceGrade = 'B';
+        else if (attendancePercentage >= 70) performanceGrade = 'C';
+        else performanceGrade = 'D';
+      }
+      
+      performanceData.push({
+        subject: subject,
+        attendancePercentage: attendancePercentage,
+        performancePercentage: performancePercentage,
+        grade: performanceGrade,
+        totalClasses: stats.total,
+        attendedClasses: stats.present,
+        absentClasses: stats.absent,
+        lateClasses: stats.late
+      });
+    });
+    
+    return {
+      success: true,
+      performance: performanceData
+    };
+  } catch (error) {
+    console.error('Error getting student subject performance:', error);
+    return {
+      success: false,
+      error: error.message,
+      performance: []
+    };
+  }
+};
+
+// Get student dashboard data (combines recent attendance and performance)
+export const getStudentDashboardData = async (studentId) => {
+  try {
+    const [attendanceResult, performanceResult] = await Promise.all([
+      getStudentRecentAttendance(studentId, 5),
+      getStudentSubjectPerformance(studentId)
+    ]);
+    
+    return {
+      success: true,
+      recentAttendance: attendanceResult.records || [],
+      subjectPerformance: performanceResult.performance || [],
+      error: null
+    };
+  } catch (error) {
+    console.error('Error getting student dashboard data:', error);
+    return {
+      success: false,
+      recentAttendance: [],
+      subjectPerformance: [],
+      error: error.message
+    };
+  }
+};
+
+// Add sample attendance data for testing (remove in production)
+export const addSampleAttendanceData = async (studentId) => {
+  try {
+    const sampleData = [
+      {
+        studentId: studentId,
+        subject: 'Data Structures',
+        status: 'Present',
+        markedAt: new Date('2024-09-12T09:15:00'),
+        sessionData: { subject: 'Data Structures', location: 'Room 101' }
+      },
+      {
+        studentId: studentId,
+        subject: 'Web Development',
+        status: 'Present',
+        markedAt: new Date('2024-09-11T10:30:00'),
+        sessionData: { subject: 'Web Development', location: 'Lab 201' }
+      },
+      {
+        studentId: studentId,
+        subject: 'Database Systems',
+        status: 'Late',
+        markedAt: new Date('2024-09-10T09:45:00'),
+        sessionData: { subject: 'Database Systems', location: 'Room 301' }
+      },
+      {
+        studentId: studentId,
+        subject: 'Software Engineering',
+        status: 'Present',
+        markedAt: new Date('2024-09-09T11:15:00'),
+        sessionData: { subject: 'Software Engineering', location: 'Room 102' }
+      },
+      {
+        studentId: studentId,
+        subject: 'Machine Learning',
+        status: 'Absent',
+        markedAt: new Date('2024-09-08T10:00:00'),
+        sessionData: { subject: 'Machine Learning', location: 'Lab 301' }
+      }
+    ];
+
+    for (const record of sampleData) {
+      await addDoc(collection(db, 'attendanceRecords'), record);
+    }
+
+    return { success: true, message: 'Sample data added successfully' };
+  } catch (error) {
+    console.error('Error adding sample data:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Add sample grades data for testing (remove in production)
+export const addSampleGradesData = async (studentId) => {
+  try {
+    const sampleGrades = [
+      {
+        studentId: studentId,
+        subject: 'Data Structures',
+        grade: 'A',
+        percentage: 85,
+        lastUpdated: new Date()
+      },
+      {
+        studentId: studentId,
+        subject: 'Web Development',
+        grade: 'A+',
+        percentage: 92,
+        lastUpdated: new Date()
+      },
+      {
+        studentId: studentId,
+        subject: 'Database Systems',
+        grade: 'B+',
+        percentage: 78,
+        lastUpdated: new Date()
+      },
+      {
+        studentId: studentId,
+        subject: 'Software Engineering',
+        grade: 'A',
+        percentage: 88,
+        lastUpdated: new Date()
+      },
+      {
+        studentId: studentId,
+        subject: 'Machine Learning',
+        grade: 'B',
+        percentage: 75,
+        lastUpdated: new Date()
+      }
+    ];
+
+    for (const grade of sampleGrades) {
+      await addDoc(collection(db, 'studentGrades'), grade);
+    }
+
+    return { success: true, message: 'Sample grades added successfully' };
+  } catch (error) {
+    console.error('Error adding sample grades:', error);
+    return { success: false, error: error.message };
+  }
+};

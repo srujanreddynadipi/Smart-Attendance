@@ -21,9 +21,11 @@ import {
   Home,
   FileText,
   School,
-  AlertCircle
+  AlertCircle,
+  Scan
 } from 'lucide-react';
 import { registerUser } from '../firebase/auth';
+import FaceRegistration from '../components/FaceRegistration';
 
 const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
   // console.log('RegisterPage is re-rendering...'); // You can remove this line now
@@ -70,6 +72,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
     
     // Additional
     profileImage: null,
+    faceData: null,
     agreeTerms: false
   });
 
@@ -78,8 +81,9 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
     { id: 2, title: 'Address', icon: Home, description: 'Contact information' },
     { id: 3, title: 'Academic', icon: BookOpen, description: 'Educational details' },
     { id: 4, title: 'Account', icon: Lock, description: 'Login credentials' },
-    { id: 5, title: 'Emergency', icon: Users, description: 'Emergency contact' },
-    { id: 6, title: 'Review', icon: CheckCircle, description: 'Final review' }
+    { id: 5, title: 'Face Setup', icon: Scan, description: 'Register your face' },
+    { id: 6, title: 'Emergency', icon: Users, description: 'Emergency contact' },
+    { id: 7, title: 'Review', icon: CheckCircle, description: 'Final review' }
   ];
 
   const handleInputChange = (e) => {
@@ -128,8 +132,10 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
         return formData.password && formData.confirmPassword && 
                isEmailValid && isPasswordValid && passwordsMatch;
       case 5:
-        return formData.emergencyName && formData.emergencyPhone && formData.emergencyRelation;
+        return formData.faceData !== null; // Face registration required
       case 6:
+        return formData.emergencyName && formData.emergencyPhone && formData.emergencyRelation;
+      case 7:
         return formData.agreeTerms;
       default:
         return true;
@@ -138,7 +144,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
 
   const nextStep = () => {
     if (validateCurrentStep()) {
-      setCurrentStep(prev => Math.min(prev + 1, 6));
+      setCurrentStep(prev => Math.min(prev + 1, 7));
       setError(''); // Clear any previous errors
     } else {
       // Set specific error messages based on current step
@@ -164,9 +170,12 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
           }
           break;
         case 5:
-          setError('Please fill in emergency contact information');
+          setError('Please capture your face for registration');
           break;
         case 6:
+          setError('Please fill in emergency contact information');
+          break;
+        case 7:
           setError('Please agree to the terms and conditions');
           break;
         default:
@@ -217,7 +226,9 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
           name: formData.emergencyName,
           phone: formData.emergencyPhone,
           relation: formData.emergencyRelation
-        }
+        },
+        // Include face data for attendance verification
+        faceData: formData.faceData || null
       };
 
       // Debug: Log the registration attempt
@@ -649,7 +660,59 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
     </div>
   );
 
-  // Step 5: Emergency Contact
+  // Step 5: Face Registration
+  const FaceRegistrationStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-blue-500 rounded-full mx-auto flex items-center justify-center mb-4">
+          <Camera className="w-10 h-10 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800">Face Registration</h2>
+        <p className="text-gray-600">Capture your face for secure attendance verification</p>
+      </div>
+
+      <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+        <div className="flex">
+          <AlertCircle className="w-5 h-5 text-blue-400 mr-3 mt-0.5" />
+          <div className="text-sm text-blue-700">
+            <p className="font-medium">Important Security Information:</p>
+            <ul className="mt-2 list-disc list-inside space-y-1">
+              <li>Your face data will be encrypted and stored securely</li>
+              <li>This enables automatic attendance verification</li>
+              <li>Please ensure good lighting and look directly at the camera</li>
+              <li>Remove any glasses, hats, or face coverings</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-md mx-auto">
+        <FaceRegistration
+          onFaceRegistered={(faceData) => {
+            setFormData(prev => ({
+              ...prev,
+              faceData: faceData
+            }));
+          }}
+          className="w-full"
+        />
+      </div>
+
+      {formData.faceData && (
+        <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
+          <div className="flex">
+            <CheckCircle className="w-5 h-5 text-green-400 mr-3 mt-0.5" />
+            <div className="text-sm text-green-700">
+              <p className="font-medium">Face registration completed successfully!</p>
+              <p className="mt-1">Your face profile has been captured and will be used for attendance verification.</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Step 6: Emergency Contact
   const EmergencyStep = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
@@ -772,6 +835,24 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
             <p><span className="font-medium">Relation:</span> {formData.emergencyRelation}</p>
           </div>
         </div>
+
+        <div className="bg-white/60 rounded-xl p-4 border border-white/50 md:col-span-2">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <Camera className="w-4 h-4" />
+            Face Registration
+          </h3>
+          {formData.faceData ? (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <CheckCircle className="w-4 h-4" />
+              <span className="font-medium">Face profile captured successfully</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-orange-600">
+              <AlertCircle className="w-4 h-4" />
+              <span className="font-medium">Face registration is required for attendance verification</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
@@ -799,8 +880,9 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
       case 2: return <AddressStep />;
       case 3: return <AcademicStep />;
       case 4: return <AccountStep />;
-      case 5: return <EmergencyStep />;
-      case 6: return <ReviewStep key="review-step" />;
+      case 5: return <FaceRegistrationStep />;
+      case 6: return <EmergencyStep />;
+      case 7: return <ReviewStep key="review-step" />;
       default: return <PersonalInfoStep />;
     }
   };
@@ -912,7 +994,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
                 Previous
               </button>
 
-              {currentStep < 6 ? (
+              {currentStep < 7 ? (
                 <button
                   onClick={nextStep}
                   className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"

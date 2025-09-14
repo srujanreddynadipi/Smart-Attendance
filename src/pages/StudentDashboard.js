@@ -21,7 +21,9 @@ import {
   Users,
   Activity,
   LogOut,
-  BookOpen
+  BookOpen,
+  Plus,
+  School
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { logoutUser } from '../firebase/auth';
@@ -31,8 +33,15 @@ import locationService from '../services/locationService';
 import { 
   verifyQRCode, 
   verifyLocationProximity, 
-  markAttendance 
+  markAttendance,
+  getStudentDashboardData,
+  addSampleAttendanceData,
+  addSampleGradesData
 } from '../firebase/attendance';
+import {
+  joinClassroom,
+  getStudentClassrooms
+} from '../firebase/classrooms';
 import ProfilePage from './ProfilePage';
 
 const StudentDashboard = ({ onLogout }) => {
@@ -51,6 +60,12 @@ const StudentDashboard = ({ onLogout }) => {
     faceVerified: false,
     sessionData: null
   });
+
+  // Classroom state
+  const [showJoinClassroom, setShowJoinClassroom] = useState(false);
+  const [classroomCode, setClassroomCode] = useState('');
+  const [studentClassrooms, setStudentClassrooms] = useState([]);
+  const [joinLoading, setJoinLoading] = useState(false);
 
   // Handle logout
   const handleLogout = async () => {
@@ -74,23 +89,164 @@ const StudentDashboard = ({ onLogout }) => {
     setCurrentStep('home');
   };
 
-  const [attendanceRecords, setAttendanceRecords] = useState([
-    { date: '2024-09-12', subject: 'Data Structures', status: 'present', time: '09:15 AM' },
-    { date: '2024-09-11', subject: 'Web Development', status: 'present', time: '10:30 AM' },
-    { date: '2024-09-10', subject: 'Database Systems', status: 'late', time: '09:45 AM' },
-    { date: '2024-09-09', subject: 'Software Engineering', status: 'present', time: '11:15 AM' },
-    { date: '2024-09-08', subject: 'Machine Learning', status: 'absent', time: '-' },
-    { date: '2024-09-07', subject: 'Data Structures', status: 'present', time: '09:10 AM' },
-    { date: '2024-09-06', subject: 'Web Development', status: 'present', time: '10:25 AM' }
-  ]);
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [subjectMarks, setSubjectMarks] = useState([]);
+  const [isLoadingDashboardData, setIsLoadingDashboardData] = useState(true);
+  const [dashboardError, setDashboardError] = useState(null);
 
-  const [subjectMarks, setSubjectMarks] = useState([
-    { subject: 'Data Structures', totalMarks: 100, obtainedMarks: 85, percentage: 85, grade: 'A' },
-    { subject: 'Web Development', totalMarks: 100, obtainedMarks: 92, percentage: 92, grade: 'A+' },
-    { subject: 'Database Systems', totalMarks: 100, obtainedMarks: 78, percentage: 78, grade: 'B+' },
-    { subject: 'Software Engineering', totalMarks: 100, obtainedMarks: 88, percentage: 88, grade: 'A' },
-    { subject: 'Machine Learning', totalMarks: 100, obtainedMarks: 75, percentage: 75, grade: 'B' },
-  ]);
+  // Load dashboard data when component mounts
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (userData?.studentId || userData?.uid) {
+        setIsLoadingDashboardData(true);
+        try {
+          const studentId = userData.studentId || userData.uid;
+          const result = await getStudentDashboardData(studentId);
+          
+          if (result.success) {
+            // Transform attendance data for display
+            const transformedAttendance = result.recentAttendance.map(record => ({
+              date: record.date.toISOString().split('T')[0],
+              subject: record.subject,
+              status: record.status.toLowerCase(),
+              time: record.time
+            }));
+            
+            // Transform performance data for display
+            const transformedSubjects = result.subjectPerformance.map(perf => ({
+              subject: perf.subject,
+              totalMarks: 100,
+              obtainedMarks: perf.performancePercentage,
+              percentage: perf.performancePercentage,
+              grade: perf.grade,
+              attendancePercentage: perf.attendancePercentage
+            }));
+            
+            setAttendanceRecords(transformedAttendance);
+            setSubjectMarks(transformedSubjects);
+            setDashboardError(null);
+          } else {
+            setDashboardError(result.error);
+            // Keep using fallback data if Firebase fails
+            setAttendanceRecords([
+              { date: '2024-09-12', subject: 'Data Structures', status: 'present', time: '09:15 AM' },
+              { date: '2024-09-11', subject: 'Web Development', status: 'present', time: '10:30 AM' },
+              { date: '2024-09-10', subject: 'Database Systems', status: 'late', time: '09:45 AM' },
+              { date: '2024-09-09', subject: 'Software Engineering', status: 'present', time: '11:15 AM' },
+              { date: '2024-09-08', subject: 'Machine Learning', status: 'absent', time: '-' }
+            ]);
+            setSubjectMarks([
+              { subject: 'Data Structures', totalMarks: 100, obtainedMarks: 85, percentage: 85, grade: 'A' },
+              { subject: 'Web Development', totalMarks: 100, obtainedMarks: 92, percentage: 92, grade: 'A+' },
+              { subject: 'Database Systems', totalMarks: 100, obtainedMarks: 78, percentage: 78, grade: 'B+' },
+              { subject: 'Software Engineering', totalMarks: 100, obtainedMarks: 88, percentage: 88, grade: 'A' },
+              { subject: 'Machine Learning', totalMarks: 100, obtainedMarks: 75, percentage: 75, grade: 'B' }
+            ]);
+          }
+        } catch (error) {
+          console.error('Error loading dashboard data:', error);
+          setDashboardError(error.message);
+        } finally {
+          setIsLoadingDashboardData(false);
+        }
+      }
+    };
+
+    loadDashboardData();
+    loadStudentClassrooms();
+  }, [userData]);
+
+  // Add sample data for testing
+  const handleAddSampleData = async () => {
+    if (userData?.studentId || userData?.uid) {
+      const studentId = userData.studentId || userData.uid;
+      try {
+        const [attendanceResult, gradesResult] = await Promise.all([
+          addSampleAttendanceData(studentId),
+          addSampleGradesData(studentId)
+        ]);
+        
+        if (attendanceResult.success && gradesResult.success) {
+          alert('Sample data added successfully! Refreshing dashboard...');
+          // Reload dashboard data
+          const result = await getStudentDashboardData(studentId);
+          if (result.success) {
+            const transformedAttendance = result.recentAttendance.map(record => ({
+              date: record.date.toISOString().split('T')[0],
+              subject: record.subject,
+              status: record.status.toLowerCase(),
+              time: record.time
+            }));
+            
+            const transformedSubjects = result.subjectPerformance.map(perf => ({
+              subject: perf.subject,
+              totalMarks: 100,
+              obtainedMarks: perf.performancePercentage,
+              percentage: perf.performancePercentage,
+              grade: perf.grade,
+              attendancePercentage: perf.attendancePercentage
+            }));
+            
+            setAttendanceRecords(transformedAttendance);
+            setSubjectMarks(transformedSubjects);
+          }
+        } else {
+          alert('Error adding sample data: ' + (attendanceResult.error || gradesResult.error));
+        }
+      } catch (error) {
+        console.error('Error adding sample data:', error);
+        alert('Error adding sample data: ' + error.message);
+      }
+    }
+  };
+
+  // Load student classrooms
+  const loadStudentClassrooms = async () => {
+    if (userData?.studentId || userData?.uid) {
+      const studentId = userData.studentId || userData.uid;
+      try {
+        const result = await getStudentClassrooms(studentId);
+        if (result.success) {
+          setStudentClassrooms(result.classrooms);
+        } else {
+          console.error('Error loading classrooms:', result.error);
+        }
+      } catch (error) {
+        console.error('Error loading classrooms:', error);
+      }
+    }
+  };
+
+  // Handle join classroom
+  const handleJoinClassroom = async (e) => {
+    e.preventDefault();
+    if (!classroomCode.trim() || !userData) return;
+
+    setJoinLoading(true);
+    try {
+      const studentId = userData.studentId || userData.uid;
+      const studentData = {
+        name: userData.name,
+        email: userData.email
+      };
+
+      const result = await joinClassroom(studentId, studentData, classroomCode.trim());
+      
+      if (result.success) {
+        alert(result.message);
+        setClassroomCode('');
+        setShowJoinClassroom(false);
+        loadStudentClassrooms(); // Refresh classrooms
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error joining classroom:', error);
+      alert('Error joining classroom: ' + error.message);
+    } finally {
+      setJoinLoading(false);
+    }
+  };
 
   const videoRef = useRef(null);
 
@@ -395,7 +551,7 @@ const StudentDashboard = ({ onLogout }) => {
       {/* Quick Actions */}
       <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
         <h3 className="text-2xl font-bold text-gray-800 mb-6">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <button
             onClick={startQRScanner}
             className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
@@ -408,7 +564,34 @@ const StudentDashboard = ({ onLogout }) => {
               </div>
             </div>
           </button>
-          <button className="bg-gradient-to-r from-green-500 to-teal-600 text-white p-6 rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+          
+          <button 
+            onClick={handleAddSampleData}
+            className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+          >
+            <div className="flex items-center gap-4">
+              <Activity className="w-8 h-8" />
+              <div className="text-left">
+                <div className="text-lg">Add Test Data</div>
+                <div className="text-sm opacity-90">Load sample attendance</div>
+              </div>
+            </div>
+          </button>
+
+          <button 
+            onClick={() => setShowJoinClassroom(true)}
+            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+          >
+            <div className="flex items-center gap-4">
+              <School className="w-8 h-8" />
+              <div className="text-left">
+                <div className="text-lg">Join Classroom</div>
+                <div className="text-sm opacity-90">Enter classroom code</div>
+              </div>
+            </div>
+          </button>
+          
+          <button className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-6 rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center gap-4">
               <BookOpen className="w-8 h-8" />
               <div className="text-left">
@@ -418,6 +601,49 @@ const StudentDashboard = ({ onLogout }) => {
             </div>
           </button>
         </div>
+      </div>
+
+      {/* My Classrooms */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-gray-800">My Classrooms</h3>
+          <button 
+            onClick={() => setShowJoinClassroom(true)}
+            className="text-green-600 font-semibold hover:text-green-800 transition-colors flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" />
+            Join New
+          </button>
+        </div>
+        {studentClassrooms.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {studentClassrooms.map((classroom) => (
+              <div key={classroom.id} className="bg-white/60 rounded-2xl p-4 border border-white/50">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl flex items-center justify-center">
+                    <School className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-gray-800">{classroom.name}</h4>
+                    <p className="text-sm text-gray-600">{classroom.description}</p>
+                    <p className="text-xs text-gray-500">Code: {classroom.code} • {classroom.studentCount} students</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <School className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-600 mb-4">You haven't joined any classrooms yet</p>
+            <button 
+              onClick={() => setShowJoinClassroom(true)}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-2 rounded-xl font-semibold hover:shadow-lg transition-all"
+            >
+              Join Your First Classroom
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Recent Attendance */}
@@ -677,6 +903,54 @@ const StudentDashboard = ({ onLogout }) => {
 
       {/* Attendance Process Modals */}
       <AttendanceSteps />
+
+      {/* Join Classroom Modal */}
+      {showJoinClassroom && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Join Classroom</h2>
+            <form onSubmit={handleJoinClassroom}>
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Classroom Code
+                </label>
+                <input
+                  type="text"
+                  value={classroomCode}
+                  onChange={(e) => setClassroomCode(e.target.value.toUpperCase())}
+                  placeholder="Enter 6-digit classroom code"
+                  className="w-full p-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  maxLength={6}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Ask your teacher for the classroom code
+                </p>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowJoinClassroom(false);
+                    setClassroomCode('');
+                  }}
+                  className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={joinLoading || !classroomCode.trim()}
+                  className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {joinLoading ? 'Joining...' : 'Join Classroom'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
