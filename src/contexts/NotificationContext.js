@@ -107,6 +107,7 @@ export const NotificationProvider = ({ children }) => {
     
     // Confirm dialogs
     confirm,
+    confirmDialog: confirm, // Alias for backward compatibility
     confirmDelete,
     confirmAction,
     confirmApproval,

@@ -874,16 +874,18 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
     </div>
   );
 
+  // Important: call the step renderers as functions to avoid React treating them as new component types
+  // on each render, which can cause inputs to lose focus. Returning JSX directly preserves focus.
   const renderCurrentStep = () => {
     switch(currentStep) {
-      case 1: return <PersonalInfoStep />;
-      case 2: return <AddressStep />;
-      case 3: return <AcademicStep />;
-      case 4: return <AccountStep />;
-      case 5: return <FaceRegistrationStep />;
-      case 6: return <EmergencyStep />;
-      case 7: return <ReviewStep key="review-step" />;
-      default: return <PersonalInfoStep />;
+      case 1: return PersonalInfoStep();
+      case 2: return AddressStep();
+      case 3: return AcademicStep();
+      case 4: return AccountStep();
+      case 5: return FaceRegistrationStep();
+      case 6: return EmergencyStep();
+      case 7: return ReviewStep();
+      default: return PersonalInfoStep();
     }
   };
 
@@ -982,6 +984,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
             {/* Navigation Buttons */}
             <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
               <button
+                type="button"
                 onClick={prevStep}
                 disabled={currentStep === 1}
                 className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
@@ -996,6 +999,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
 
               {currentStep < 7 ? (
                 <button
+                  type="button"
                   onClick={nextStep}
                   className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
                 >
@@ -1004,6 +1008,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={handleSubmit}
                   disabled={loading || !formData.agreeTerms}
                   className={`flex items-center gap-2 px-8 py-3 rounded-xl font-semibold transition-all duration-300 ${
@@ -1049,4 +1054,4 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
   );
 };
 
-export default memo(RegisterPage);
+export default RegisterPage;
