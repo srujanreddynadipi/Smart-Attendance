@@ -620,15 +620,57 @@ const StudentDashboard = ({ onLogout }) => {
         {studentClassrooms.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {studentClassrooms.map((classroom) => (
-              <div key={classroom.id} className="bg-white/60 rounded-2xl p-4 border border-white/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl flex items-center justify-center">
+              <div key={classroom.id} className="bg-white/60 rounded-2xl p-4 border border-white/50 hover:shadow-md transition-shadow">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <School className="w-6 h-6 text-green-600" />
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-800">{classroom.name}</h4>
-                    <p className="text-sm text-gray-600">{classroom.description}</p>
-                    <p className="text-xs text-gray-500">Code: {classroom.code} • {classroom.studentCount} students</p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-gray-800 text-lg mb-1">{classroom.name}</h4>
+                    <p className="text-sm text-gray-600 mb-2">{classroom.description}</p>
+                    
+                    {/* Teacher Name */}
+                    {classroom.teacherName && (
+                      <div className="flex items-center gap-1 mb-2">
+                        <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center">
+                          <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                        </div>
+                        <span className="text-sm font-medium text-blue-700">
+                          {classroom.teacherName}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Subjects */}
+                    {classroom.subjects && classroom.subjects.length > 0 && (
+                      <div className="mb-2">
+                        <div className="flex flex-wrap gap-1">
+                          {classroom.subjects.slice(0, 3).map((subject, index) => (
+                            <span 
+                              key={index}
+                              className="inline-block bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-full font-medium"
+                            >
+                              {subject.name || subject}
+                            </span>
+                          ))}
+                          {classroom.subjects.length > 3 && (
+                            <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
+                              +{classroom.subjects.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Code and Student Count */}
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span className="font-mono bg-gray-100 px-2 py-1 rounded">
+                        Code: {classroom.code}
+                      </span>
+                      <span>
+                        {classroom.studentCount || 0} students
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -743,7 +785,7 @@ const StudentDashboard = ({ onLogout }) => {
             <QRScanner
               onScanSuccess={handleQRScanSuccess}
               onScanError={handleQRScanError}
-              onCancel={() => setCurrentStep('home')}
+              onClose={() => setCurrentStep('home')}
             />
           </div>
         </div>
