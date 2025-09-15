@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { LayoutDashboard, Users, BookOpen, BarChart2, GraduationCap, UserCheck, TrendingUp, Bell, Settings, Search, Upload, UserPlus, Trash2, Edit, Key, Check, CheckCircle, AlertCircle, Info, ChevronRight, FileText, Award, DollarSign, Activity, PieChart as PieChartLucide, Edit2, X, LogOut, Plus, Download, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, BarChart2, GraduationCap, UserCheck, TrendingUp, Bell, Settings, Search, Upload, UserPlus, Trash2, Edit, Key, Check, CheckCircle, AlertCircle, Info, ChevronRight, FileText, Award, DollarSign, Activity, PieChart as PieChartLucide, Edit2, X, LogOut, Plus, Download, ClipboardCheck, UserX, Clock } from 'lucide-react';
 import { registerUser, logoutUser, createStudent, createTeacher, createParent } from '../firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
@@ -11,6 +11,12 @@ import {
   getRecentActivities,
   getAllUsers
 } from '../firebase/adminDashboard';
+import { 
+  getPendingChildRequests, 
+  approveChildRequest, 
+  rejectChildRequest, 
+  getAllChildRequests 
+} from '../firebase/childRequests';
 
 const SchoolManagementDashboard = ({ onLogout }) => {
     const { userData } = useAuth();
@@ -77,6 +83,8 @@ const SchoolManagementDashboard = ({ onLogout }) => {
     });
 
     const [dashboardLoading, setDashboardLoading] = useState(true);
+    const [childRequests, setChildRequests] = useState([]);
+    const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
     // Load real data from Firebase
     const loadDashboardData = async () => {
@@ -153,7 +161,64 @@ const SchoolManagementDashboard = ({ onLogout }) => {
     // Load data on component mount
     useEffect(() => {
         loadDashboardData();
+        loadChildRequests();
     }, []);
+
+    // Load child requests
+    const loadChildRequests = async () => {
+        try {
+            const result = await getAllChildRequests();
+            if (result.success) {
+                setChildRequests(result.requests);
+                const pendingCount = result.requests.filter(req => req.status === 'pending').length;
+                setPendingRequestsCount(pendingCount);
+                console.log('✅ Loaded child requests:', result.requests.length, 'total,', pendingCount, 'pending');
+            }
+        } catch (error) {
+            console.error('❌ Error loading child requests:', error);
+        }
+    };
+
+    // Handle child request approval
+    const handleApproveChildRequest = async (requestId, requestData) => {
+        try {
+            setLoading(true);
+            const result = await approveChildRequest(requestId, userData?.uid, userData?.name || 'Admin');
+            
+            if (result.success) {
+                showSuccess(result.message);
+                await loadChildRequests(); // Reload requests
+                await loadDashboardData(); // Reload dashboard to update counts
+            } else {
+                showError(result.error);
+            }
+        } catch (error) {
+            console.error('❌ Error approving child request:', error);
+            showError('Failed to approve request');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Handle child request rejection
+    const handleRejectChildRequest = async (requestId, reason = '') => {
+        try {
+            setLoading(true);
+            const result = await rejectChildRequest(requestId, userData?.uid, userData?.name || 'Admin', reason);
+            
+            if (result.success) {
+                showSuccess(result.message);
+                await loadChildRequests(); // Reload requests
+            } else {
+                showError(result.error);
+            }
+        } catch (error) {
+            console.error('❌ Error rejecting child request:', error);
+            showError('Failed to reject request');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Handle navigation to detailed views
     const handleViewDetails = (viewType) => {
@@ -1368,6 +1433,193 @@ const SchoolManagementDashboard = ({ onLogout }) => {
         </div>
     );
 
+    const renderChildRequests = () => (
+        <div className="space-y-6 animate-slide-in">
+            {/* Header */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/50">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+                            <UserPlus className="w-8 h-8 text-purple-600" />
+                            Child Addition Requests
+                        </h2>
+                        <p className="text-gray-600 mt-2">Manage parent requests to link children to their accounts</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="bg-red-100 text-red-700 px-4 py-2 rounded-xl font-semibold">
+                            {pendingRequestsCount} Pending
+                        </div>
+                        <button
+                            onClick={loadChildRequests}
+                            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center gap-2"
+                        >
+                            <Clock className="w-5 h-5" />
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                    <div className="bg-white/60 rounded-2xl p-6 border border-white/50">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <Clock className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-gray-800">
+                                    {childRequests.filter(req => req.status === 'pending').length}
+                                </div>
+                                <div className="text-gray-600 font-medium">Pending</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-white/60 rounded-2xl p-6 border border-white/50">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                <CheckCircle className="w-6 h-6 text-green-600" />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-gray-800">
+                                    {childRequests.filter(req => req.status === 'approved').length}
+                                </div>
+                                <div className="text-gray-600 font-medium">Approved</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-white/60 rounded-2xl p-6 border border-white/50">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                                <UserX className="w-6 h-6 text-red-600" />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-gray-800">
+                                    {childRequests.filter(req => req.status === 'rejected').length}
+                                </div>
+                                <div className="text-gray-600 font-medium">Rejected</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-white/60 rounded-2xl p-6 border border-white/50">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                                <Users className="w-6 h-6 text-purple-600" />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-gray-800">{childRequests.length}</div>
+                                <div className="text-gray-600 font-medium">Total Requests</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Requests List */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 overflow-hidden">
+                <div className="px-8 py-6 border-b border-gray-100">
+                    <h3 className="text-xl font-bold text-gray-800">All Requests</h3>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-gray-50/50">
+                            <tr>
+                                {['Date', 'Parent', 'Student ID', 'Student Name', 'Reason', 'Status', 'Actions'].map((header) => (
+                                    <th key={header} className="px-6 py-4 text-left text-sm font-bold text-gray-600 uppercase tracking-wider">
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {childRequests.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-12 text-center">
+                                        <UserPlus className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                        <p className="text-gray-500 text-lg">No child requests found</p>
+                                        <p className="text-gray-400">Parent requests will appear here</p>
+                                    </td>
+                                </tr>
+                            ) : (
+                                childRequests.map((request) => (
+                                    <tr key={request.id} className="hover:bg-white/30 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap text-gray-900">
+                                            {new Date(request.createdAt).toLocaleDateString('en-US', {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                year: 'numeric'
+                                            })}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div>
+                                                <div className="text-gray-900 font-medium">{request.parentName}</div>
+                                                <div className="text-gray-500 text-sm">{request.parentEmail}</div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="font-mono text-gray-900">{request.studentId}</span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-gray-900">
+                                            {request.studentName || 'Not provided'}
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-900 max-w-xs truncate" title={request.reason}>
+                                            {request.reason || 'No reason provided'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                                                request.status === 'pending' 
+                                                    ? 'bg-yellow-100 text-yellow-800' 
+                                                    : request.status === 'approved'
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : 'bg-red-100 text-red-800'
+                                            }`}>
+                                                {request.status === 'pending' && <Clock className="w-4 h-4 mr-1" />}
+                                                {request.status === 'approved' && <CheckCircle className="w-4 h-4 mr-1" />}
+                                                {request.status === 'rejected' && <UserX className="w-4 h-4 mr-1" />}
+                                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            {request.status === 'pending' ? (
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleApproveChildRequest(request.id, request)}
+                                                        disabled={loading}
+                                                        className="bg-green-100 text-green-700 hover:bg-green-200 px-3 py-2 rounded-lg font-semibold transition-all duration-300 flex items-center gap-1 disabled:opacity-50"
+                                                    >
+                                                        <CheckCircle className="w-4 h-4" />
+                                                        Approve
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleRejectChildRequest(request.id)}
+                                                        disabled={loading}
+                                                        className="bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg font-semibold transition-all duration-300 flex items-center gap-1 disabled:opacity-50"
+                                                    >
+                                                        <UserX className="w-4 h-4" />
+                                                        Reject
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="text-gray-500 text-sm">
+                                                    {request.status === 'approved' 
+                                                        ? `Approved by ${request.approvedByName || 'Admin'}`
+                                                        : `Rejected by ${request.rejectedByName || 'Admin'}`
+                                                    }
+                                                    <div className="text-xs text-gray-400">
+                                                        {new Date(request.approvedAt || request.rejectedAt).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-6">
             <div className="max-w-7xl mx-auto">
@@ -1419,13 +1671,14 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                         {[
                             { id: 'overview', label: 'Overview', icon: LayoutDashboard },
                             { id: 'users', label: 'User Management', icon: Users },
+                            { id: 'child-requests', label: 'Child Requests', icon: UserPlus, badge: pendingRequestsCount },
                             { id: 'academic', label: 'Academic', icon: BookOpen },
                             { id: 'reports', label: 'Reports & Analytics', icon: BarChart2 },
                         ].map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 ${
+                                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 relative ${
                                     activeTab === tab.id
                                         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
                                         : 'text-gray-600 hover:bg-white/50'
@@ -1433,6 +1686,11 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                             >
                                 <tab.icon className="w-5 h-5" />
                                 {tab.label}
+                                {tab.badge && tab.badge > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold">
+                                        {tab.badge}
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </div>
@@ -1444,6 +1702,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                 {activeTab === 'overview' && detailView === 'teachers' && renderTeacherDetails()}
                 {activeTab === 'overview' && detailView === 'parents' && renderParentDetails()}
                 {activeTab === 'users' && renderUserManagement()}
+                {activeTab === 'child-requests' && renderChildRequests()}
                 {activeTab === 'academic' && renderAcademicManagement()}
                 {activeTab === 'reports' && renderReports()}
 

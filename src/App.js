@@ -2,10 +2,12 @@ import React, { useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { logoutUser } from './firebase/auth';
 import Login from './pages/Login';
 import RegisterPage from './pages/RegisterPage';
 import TeacherDashboard from './pages/TeacherDashboard';
 import StudentDashboard from './pages/StudentDashboard';
+import ParentDashboard from './pages/ParentDashboard';
 import ClassroomManagement from './pages/ClassroomManagement';
 import ClassroomDetails from './pages/ClassroomDetails';
 import WorkflowTest from './pages/WorkflowTest';
@@ -24,9 +26,14 @@ function AppContent() {
     navigate('/login');
   }, [navigate]);
 
-  const handleLogout = useCallback(() => {
-    console.log('User logged out');
-  }, []);
+  const handleLogout = useCallback(async () => {
+    try {
+      await logoutUser();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  }, [navigate]);
 
   // Protected Route Component
   const ProtectedRoute = ({ children, requiredRole = null }) => {
@@ -37,6 +44,7 @@ function AppContent() {
     if (requiredRole && userData.role !== requiredRole) {
       if (userData.role === 'teacher') return <Navigate to="/teacher" replace />;
       if (userData.role === 'student') return <Navigate to="/student" replace />;
+      if (userData.role === 'parent') return <Navigate to="/parent" replace />;
       if (userData.role === 'admin') return <Navigate to="/admin" replace />;
     }
     
@@ -48,6 +56,7 @@ function AppContent() {
     if (currentUser && userData) {
       if (userData.role === 'teacher') return <Navigate to="/teacher" replace />;
       if (userData.role === 'student') return <Navigate to="/student" replace />;
+      if (userData.role === 'parent') return <Navigate to="/parent" replace />;
       if (userData.role === 'admin') return <Navigate to="/admin" replace />;
     }
     return children;
@@ -102,6 +111,12 @@ function AppContent() {
         </ProtectedRoute>
       } />
       
+      <Route path="/parent" element={
+        <ProtectedRoute requiredRole="parent">
+          <ParentDashboard onLogout={handleLogout} />
+        </ProtectedRoute>
+      } />
+      
       <Route path="/admin" element={
         <ProtectedRoute requiredRole="admin">
           <SchoolManagementDashboard onLogout={handleLogout} />
@@ -113,6 +128,7 @@ function AppContent() {
         currentUser && userData ? (
           userData.role === 'teacher' ? <Navigate to="/teacher" replace /> :
           userData.role === 'student' ? <Navigate to="/student" replace /> :
+          userData.role === 'parent' ? <Navigate to="/parent" replace /> :
           userData.role === 'admin' ? <Navigate to="/admin" replace /> :
           <Navigate to="/login" replace />
         ) : (

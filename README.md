@@ -17,6 +17,13 @@ A comprehensive web-based attendance management system built with React and Fire
 - **Real-time Updates**: See attendance status and classroom information instantly
 - **Profile Management**: Manage student profile and enrolled classrooms
 
+### 👨‍👩‍👧‍👦 Parent Dashboard
+- **Children Overview**: View all children's information and academic details
+- **Attendance Monitoring**: Track children's attendance with real-time data
+- **Performance Analytics**: View attendance statistics and trends
+- **Teacher Communication**: Connect with teachers for each child
+- **Multi-child Support**: Manage multiple children from a single account
+
 ### 🏫 Classroom Management
 - **Classroom Creation**: Set up classrooms with subjects, locations, and academic details
 - **Join Request System**: Students request to join, teachers approve/reject
