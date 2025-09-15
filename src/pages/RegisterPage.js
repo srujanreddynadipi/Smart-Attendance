@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState } from 'react';
 import { 
   User, 
   GraduationCap, 
@@ -19,12 +19,12 @@ import {
   Sparkles,
   Users,
   Home,
-  FileText,
-  School,
+  
   AlertCircle,
   Scan
 } from 'lucide-react';
 import { registerUser } from '../firebase/auth';
+import { storeFaceEncoding } from '../firebase/faceDatabase';
 import FaceRegistration from '../components/FaceRegistration';
 
 const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
@@ -241,6 +241,22 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
       const result = await registerUser(formData.email, formData.password, userData);
       
       if (result.success) {
+        // After account creation, store the face encoding using the new uid
+        try {
+          if (formData.faceData) {
+            const faceStore = await storeFaceEncoding(result.user.uid, formData.faceData, {
+              studentId: userData.studentId || result.user.uid,
+              name: userData.name,
+              email: userData.email
+            });
+            if (!faceStore.success) {
+              console.warn('Face encoding save failed:', faceStore.error);
+            }
+          }
+        } catch (e) {
+          console.warn('Face encoding save threw an error:', e);
+        }
+
         setSuccess('Registration successful! Please sign in with your new account.');
         // Optionally call onRegister with the result
         if (onRegister) {

@@ -7,19 +7,27 @@ import {
   AlertCircle,
   User,
   RefreshCw,
-  Loader
+  Loader,
+  Eye,
+  EyeOff,
+  Activity
 } from 'lucide-react';
 import faceRecognitionService from '../services/faceRecognitionService';
-import { getAllFaceEncodings } from '../firebase/faceDatabase';
+import { getFaceEncoding } from '../firebase/faceDatabase';
 
-const FaceRecognition = ({ onVerificationSuccess, onClose, studentData }) => {
+const FaceRecognition = ({ onVerificationSuccess, onClose, studentData, expectedStudentId }) => {
   const webcamRef = useRef(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
   const [error, setError] = useState('');
-  const [step, setStep] = useState('capture'); // capture, verify, success, error
+  const [step, setStep] = useState('capture'); // capture, liveness, verify, success, error
+  const [livenessStep, setLivenessStep] = useState('detect'); // detect, blink, complete
+  const [blinkDetected, setBlinkDetected] = useState(false);
+  const [eyesOpen, setEyesOpen] = useState(false);
+  const [livenessProgress, setLivenessProgress] = useState(0);
+  const [multiFrameResults, setMultiFrameResults] = useState([]);
 
   const videoConstraints = {
     width: 640,
@@ -31,184 +39,151 @@ const FaceRecognition = ({ onVerificationSuccess, onClose, studentData }) => {
     if (webcamRef.current) {
       const imageSrc = webcamRef.current.getScreenshot();
       setCapturedImage(imageSrc);
-      setStep('verify');
+      setStep('liveness');
+      setLivenessStep('detect');
+      setBlinkDetected(false);
+      setEyesOpen(false);
+      setLivenessProgress(0);
+      startLivenessCheck();
     }
   };
 
-  const simulateFaceVerification = async () => {
+  const startLivenessCheck = async () => {
+    if (!webcamRef.current) return;
+    
+    try {
+      console.log('🔍 Starting liveness detection...');
+      
+      if (!faceRecognitionService.modelsLoaded) {
+        await faceRecognitionService.initialize();
+      }
+
+      let eyesOpenDetected = false;
+      let blinkCount = 0;
+      let frameCount = 0;
+      const maxFrames = 100; // ~5 seconds at 20 FPS
+      
+      const checkLiveness = async () => {
+        if (frameCount >= maxFrames) {
+          if (blinkDetected && blinkCount >= 1) {
+            setLivenessStep('complete');
+            setLivenessProgress(100);
+            setTimeout(() => {
+              setStep('verify');
+              performMultiFrameVerification();
+            }, 1000);
+          } else {
+            setError('Liveness check failed. Please blink clearly and try again.');
+            setStep('error');
+          }
+          return;
+        }
+
+        try {
+          const video = webcamRef.current?.video;
+          if (!video) return;
+
+          const blinkResult = await faceRecognitionService.detectBlink(video);
+          
+          if (blinkResult.success) {
+            frameCount++;
+            const progress = Math.min((frameCount / maxFrames) * 100, 90);
+            setLivenessProgress(progress);
+
+            // Detect eyes open state
+            if (blinkResult.avgEAR > 0.3 && !eyesOpenDetected) {
+              eyesOpenDetected = true;
+              setEyesOpen(true);
+              setLivenessStep('blink');
+            }
+
+            // Detect blink (eyes closed after being open)
+            if (blinkResult.isBlinking && eyesOpenDetected && !blinkDetected) {
+              blinkCount++;
+              setBlinkDetected(true);
+              console.log(`✅ Blink detected! Count: ${blinkCount}`);
+              
+              if (blinkCount >= 1) {
+                setLivenessStep('complete');
+                setLivenessProgress(100);
+                setTimeout(() => {
+                  setStep('verify');
+                  performMultiFrameVerification();
+                }, 1000);
+                return;
+              }
+            }
+          }
+
+          // Continue checking
+          setTimeout(checkLiveness, 100);
+        } catch (error) {
+          console.warn('Liveness check frame error:', error);
+          setTimeout(checkLiveness, 200);
+        }
+      };
+
+      checkLiveness();
+    } catch (error) {
+      console.error('❌ Liveness check initialization failed:', error);
+      setError('Liveness detection failed to start. Proceeding with standard verification.');
+      setStep('verify');
+      performMultiFrameVerification();
+    }
+  };
+
+  const performMultiFrameVerification = async () => {
     setIsVerifying(true);
     setError('');
     
     try {
-      console.log('🔍 Starting face recognition process...');
+      console.log('🔍 Starting multi-frame face verification...');
       
-      // Check if we have captured image
-      if (!capturedImage) {
-        throw new Error('No captured image available');
+      // Check if we have the video element
+      const video = webcamRef.current?.video;
+      if (!video) {
+        throw new Error('Camera not available for verification');
       }
+
+      // Get expected student's face encoding
+      const targetId = expectedStudentId || studentData?.studentId || studentData?.uid;
+      if (!targetId) {
+        throw new Error('Missing student ID for verification.');
+      }
+
+      console.log('📊 Retrieving face encoding for student:', targetId);
+      const encodingResult = await getFaceEncoding(targetId);
+      if (!encodingResult?.success || !encodingResult?.data?.descriptor) {
+        throw new Error('No face registered for this account. Please register your face first.');
+      }
+
+      // Check encoding quality
+      const qualityCheck = await faceRecognitionService.checkEncodingQuality(encodingResult.data.descriptor);
+      if (!qualityCheck.isGoodQuality) {
+        console.warn('⚠️ Poor encoding quality detected:', qualityCheck.message);
+        // Continue but warn user
+      }
+
+      const storedDescriptor = new Float32Array(encodingResult.data.descriptor);
       
-      // For mobile devices or when face-api.js has issues, use simulation
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      if (isMobile) {
-        console.log('📱 Mobile device detected, using simulation mode...');
-        // Simulate face verification for mobile
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const confidence = Math.random() * 0.2 + 0.8; // 80-100% confidence
-        
+      // Perform multi-frame verification
+      const multiFrameResult = await faceRecognitionService.verifyFaceMultiFrame(
+        video, 
+        storedDescriptor, 
+        3, // 3 frames
+        0.45 // threshold
+      );
+
+      setMultiFrameResults(multiFrameResult.results || []);
+
+      if (multiFrameResult.success) {
+        console.log('🎉 Multi-frame verification successful!');
         setVerificationResult({
           success: true,
-          confidence: Math.round(confidence * 100),
-          message: `Face verified with ${Math.round(confidence * 100)}% confidence (Mobile Mode)`
-        });
-        setStep('success');
-        
-        setTimeout(() => {
-          onVerificationSuccess();
-        }, 1500);
-        
-        setIsVerifying(false);
-        return;
-      }
-      
-      // Desktop/web version with full face-api.js
-      try {
-        // First, try to load models if not already loaded
-        if (!faceRecognitionService.modelsLoaded) {
-          console.log('🤖 Loading face recognition models...');
-          await faceRecognitionService.initialize();
-        }
-      } catch (modelError) {
-        console.warn('❌ Face recognition models failed to load, using simulation:', modelError);
-        // Fall back to simulation if models fail to load
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const confidence = Math.random() * 0.2 + 0.8;
-        
-        setVerificationResult({
-          success: true,
-          confidence: Math.round(confidence * 100),
-          message: `Face verified with ${Math.round(confidence * 100)}% confidence (Simulation Mode)`
-        });
-        setStep('success');
-        
-        setTimeout(() => {
-          onVerificationSuccess();
-        }, 1500);
-        
-        setIsVerifying(false);
-        return;
-      }
-      
-      // Convert data URL to image element
-      const img = new Image();
-      
-      const faceRecognitionPromise = new Promise((resolve, reject) => {
-        img.onload = async () => {
-          try {
-            // Detect face in captured image
-            console.log('👤 Detecting face in captured image...');
-            
-            let faceDescriptor;
-            try {
-              faceDescriptor = await faceRecognitionService.getFaceDescriptor(img);
-            } catch (descriptorError) {
-              console.warn('❌ Face descriptor detection failed, using simulation:', descriptorError);
-              // Fall back to simulation if face detection fails
-              const confidence = Math.random() * 0.2 + 0.8;
-              resolve({
-                success: true,
-                confidence: Math.round(confidence * 100),
-                message: `Face verified with ${Math.round(confidence * 100)}% confidence (Fallback Mode)`
-              });
-              return;
-            }
-            
-            if (!faceDescriptor) {
-              reject(new Error('No face detected in the image. Please try again.'));
-              return;
-            }
-            
-            console.log('✅ Face detected successfully');
-            
-            // Get all registered face encodings from Firebase
-            console.log('📊 Retrieving registered faces from database...');
-            const registeredFaces = await getAllFaceEncodings();
-            
-            if (!registeredFaces || registeredFaces.length === 0) {
-              // If no registered faces, use simulation for now
-              console.log('⚠️ No registered faces found, using simulation...');
-              const confidence = Math.random() * 0.2 + 0.8; // 80-100% confidence
-              resolve({ success: true, confidence, simulation: true });
-              return;
-            }
-            
-            console.log(`🔍 Comparing with ${registeredFaces.length} registered faces...`);
-            
-            // Find best match
-            let bestMatch = null;
-            let bestDistance = Infinity;
-            const RECOGNITION_THRESHOLD = 0.6;
-            
-            for (const registeredFace of registeredFaces) {
-              try {
-                const storedDescriptor = new Float32Array(registeredFace.descriptor);
-                
-                let distance;
-                try {
-                  distance = faceRecognitionService.computeFaceDistance(faceDescriptor, storedDescriptor);
-                } catch (distanceError) {
-                  console.warn('❌ Distance computation failed for face, skipping:', distanceError);
-                  continue; // Skip this face and try the next one
-                }
-                
-                console.log(`👤 Distance to ${registeredFace.studentName}: ${distance.toFixed(3)}`);
-                
-                if (distance < bestDistance && distance < RECOGNITION_THRESHOLD) {
-                  bestDistance = distance;
-                  bestMatch = registeredFace;
-                }
-              } catch (err) {
-                console.warn('Error comparing with stored face:', err);
-              }
-            }
-            
-            if (bestMatch) {
-              const confidence = Math.max(0.7, Math.min(1, (1 - bestDistance)));
-              console.log(`🎉 Face recognition successful! Matched: ${bestMatch.studentName}`);
-              resolve({ 
-                success: true, 
-                confidence, 
-                matchedStudent: bestMatch.studentName,
-                studentId: bestMatch.studentId
-              });
-            } else {
-              reject(new Error('Face not recognized. Please ensure you are registered in the system.'));
-            }
-            
-          } catch (error) {
-            reject(error);
-          }
-        };
-        
-        img.onerror = () => {
-          reject(new Error('Failed to load captured image'));
-        };
-      });
-      
-      img.src = capturedImage;
-      
-      // Wait for face recognition to complete
-      const result = await faceRecognitionPromise;
-      
-      if (result.success) {
-        setVerificationResult({
-          success: true,
-          confidence: result.confidence,
-          message: result.simulation ? 
-            'Face verification successful! (Simulation mode)' : 
-            `Face recognized! Matched: ${result.matchedStudent || 'Student'}`
+          confidence: multiFrameResult.avgConfidence,
+          message: `Face verified! ${multiFrameResult.successRate}% frame match rate`,
+          multiFrame: true,
+          frameDetails: multiFrameResult
         });
         setStep('success');
         
@@ -218,19 +193,24 @@ const FaceRecognition = ({ onVerificationSuccess, onClose, studentData }) => {
             onVerificationSuccess({
               verified: true,
               success: true,
-              confidence: result.confidence * 100,
-              studentId: result.studentId,
-              studentName: result.matchedStudent,
+              confidence: multiFrameResult.avgConfidence,
+              studentId: encodingResult.data.studentId || targetId,
+              studentName: encodingResult.data.name,
               faceVerified: true,
+              livenessVerified: blinkDetected,
+              multiFrameVerified: true,
+              frameMatchRate: multiFrameResult.successRate,
               timestamp: new Date(),
               image: capturedImage
             });
           }
         }, 1500);
+      } else {
+        throw new Error(multiFrameResult.message || 'Multi-frame verification failed');
       }
       
     } catch (error) {
-      console.error('❌ Face recognition error:', error);
+      console.error('❌ Multi-frame verification error:', error);
       setVerificationResult({
         success: false,
         confidence: 0,
@@ -248,6 +228,11 @@ const FaceRecognition = ({ onVerificationSuccess, onClose, studentData }) => {
     setVerificationResult(null);
     setError('');
     setStep('capture');
+    setLivenessStep('detect');
+    setBlinkDetected(false);
+    setEyesOpen(false);
+    setLivenessProgress(0);
+    setMultiFrameResults([]);
   };
 
   return (
@@ -323,39 +308,134 @@ const FaceRecognition = ({ onVerificationSuccess, onClose, studentData }) => {
             </div>
           )}
 
-          {step === 'verify' && (
+          {step === 'liveness' && (
             <div className="space-y-4">
-              {/* Captured Image */}
-              <div className="text-center">
-                <div className="inline-block p-2 bg-gray-100 rounded-xl">
-                  <img 
-                    src={capturedImage} 
-                    alt="Captured face" 
-                    className="w-48 h-36 object-cover rounded-lg"
-                  />
+              {/* Liveness Check Instructions */}
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="w-4 h-4 text-blue-600" />
+                  <p className="text-sm font-medium text-blue-800">Liveness Check</p>
+                </div>
+                <p className="text-sm text-blue-600">
+                  {livenessStep === 'detect' && "Looking for your face..."}
+                  {livenessStep === 'blink' && "Please blink naturally"}
+                  {livenessStep === 'complete' && "Liveness verified!"}
+                </p>
+              </div>
+
+              {/* Live Camera Feed */}
+              <div className="relative bg-black rounded-xl overflow-hidden">
+                <Webcam
+                  ref={webcamRef}
+                  audio={false}
+                  screenshotFormat="image/jpeg"
+                  videoConstraints={videoConstraints}
+                  className="w-full h-64 object-cover"
+                />
+                
+                {/* Liveness Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-48 h-56 border-2 border-white rounded-full relative opacity-75">
+                    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+                    <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-white rounded-full"></div>
+                    
+                    {/* Eye indicators */}
+                    {eyesOpen && (
+                      <div className="absolute top-12 left-1/2 transform -translate-x-1/2 flex gap-4">
+                        <Eye className="w-4 h-4 text-green-400" />
+                        <Eye className="w-4 h-4 text-green-400" />
+                      </div>
+                    )}
+                    
+                    {blinkDetected && (
+                      <div className="absolute top-8 left-1/2 transform -translate-x-1/2">
+                        <CheckCircle className="w-6 h-6 text-green-400" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="absolute bottom-4 left-4 right-4">
+                  <div className="bg-black/50 rounded-lg p-2">
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${livenessProgress}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-white text-xs mt-1 text-center">
+                      {livenessStep === 'detect' && "Detecting face..."}
+                      {livenessStep === 'blink' && "Blink to continue"}
+                      {livenessStep === 'complete' && "Liveness verified!"}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Verification Status */}
+              {/* Status */}
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  {eyesOpen ? (
+                    <Eye className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <EyeOff className="w-5 h-5 text-gray-400" />
+                  )}
+                  <span className="text-sm text-gray-600">
+                    {eyesOpen ? "Eyes detected" : "Looking for eyes..."}
+                  </span>
+                </div>
+                
+                {blinkDetected && (
+                  <div className="flex items-center justify-center gap-2 text-green-600">
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Blink detected!</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 'verify' && (
+            <div className="space-y-4">
+              {/* Multi-frame Verification Status */}
               {isVerifying ? (
                 <div className="text-center py-4">
                   <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                  <p className="text-blue-600 font-medium">Verifying face...</p>
-                  <p className="text-sm text-gray-600">This may take a few seconds</p>
+                  <p className="text-blue-600 font-medium">Verifying face across multiple frames...</p>
+                  <p className="text-sm text-gray-600">This ensures accurate recognition</p>
+                  
+                  {/* Frame Results */}
+                  {multiFrameResults.length > 0 && (
+                    <div className="mt-4 bg-gray-50 rounded-lg p-3">
+                      <p className="text-xs text-gray-600 mb-2">Frame Analysis:</p>
+                      <div className="flex justify-center gap-1">
+                        {multiFrameResults.map((result, index) => (
+                          <div
+                            key={index}
+                            className={`w-3 h-3 rounded-full ${
+                              result.error ? 'bg-gray-300' :
+                              result.match ? 'bg-green-500' : 'bg-red-500'
+                            }`}
+                            title={`Frame ${index + 1}: ${result.match ? 'Match' : 'No match'} (${result.confidence}%)`}
+                          ></div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="flex gap-3">
+                <div className="text-center">
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 mb-4">
+                    <p className="text-blue-800 text-sm">
+                      Liveness check completed! Proceeding with face verification...
+                    </p>
+                  </div>
                   <button
                     onClick={retryCapture}
-                    className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    Retake
-                  </button>
-                  <button
-                    onClick={simulateFaceVerification}
-                    className="flex-1 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    Verify Face
+                    Start Over
                   </button>
                 </div>
               )}
@@ -367,12 +447,25 @@ const FaceRecognition = ({ onVerificationSuccess, onClose, studentData }) => {
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-green-600 mb-2">Verification Successful!</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Confidence: {Math.round(verificationResult.confidence * 100)}%
+                Confidence: {Math.round(verificationResult.confidence)}%
               </p>
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-green-800 text-sm">
-                  Your attendance has been marked successfully.
-                </p>
+                <div className="space-y-1 text-xs text-green-800">
+                  <div className="flex justify-between">
+                    <span>Liveness Check:</span>
+                    <CheckCircle className="w-3 h-3" />
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Multi-frame Verification:</span>
+                    <CheckCircle className="w-3 h-3" />
+                  </div>
+                  {verificationResult.frameDetails && (
+                    <div className="flex justify-between">
+                      <span>Frame Match Rate:</span>
+                      <span>{verificationResult.frameDetails.successRate}%</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

@@ -2,13 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { Camera, CheckCircle, AlertCircle, RefreshCw, User } from 'lucide-react';
 import faceRecognitionService from '../services/faceRecognitionService';
-import { storeFaceEncoding } from '../firebase/faceDatabase';
 
-const FaceRegistration = ({ userData, onRegistrationComplete, onSkip }) => {
+// Note: This component now ONLY captures face data and returns it to the parent.
+// It no longer attempts to persist to Firestore; the parent should do so after the user is created.
+const FaceRegistration = ({ onFaceRegistered, onRegistrationComplete, onSkip }) => {
   const webcamRef = useRef(null);
   const [step, setStep] = useState('instructions'); // instructions, capture, processing, success, error
   const [capturedImage, setCapturedImage] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  // removed isProcessing state; processing UI uses dedicated 'processing' step
   const [error, setError] = useState('');
   const [faceQuality, setFaceQuality] = useState(null);
 
@@ -59,7 +60,6 @@ const FaceRegistration = ({ userData, onRegistrationComplete, onSkip }) => {
   };
 
   const processFaceRegistration = async (imageDataUrl) => {
-    setIsProcessing(true);
     setError('');
 
     try {
@@ -71,27 +71,13 @@ const FaceRegistration = ({ userData, onRegistrationComplete, onSkip }) => {
           const result = await faceRecognitionService.registerFace(img);
           
           if (result.success) {
-            // Store in Firebase
-            const storeResult = await storeFaceEncoding(
-              userData.uid || userData.studentId, 
-              result.descriptor,
-              {
-                studentId: userData.studentId,
-                name: userData.firstName && userData.lastName 
-                  ? `${userData.firstName} ${userData.lastName}` 
-                  : userData.name,
-                email: userData.email
-              }
-            );
-
-            if (storeResult.success) {
-              setStep('success');
-              setTimeout(() => {
-                onRegistrationComplete && onRegistrationComplete(result.descriptor);
-              }, 2000);
-            } else {
-              throw new Error(storeResult.error || 'Failed to store face encoding');
-            }
+            // Emit the descriptor to parent for later persistence
+            setStep('success');
+            setTimeout(() => {
+              // Support both new and old callback prop names for compatibility
+              if (onFaceRegistered) onFaceRegistered(result.descriptor);
+              if (onRegistrationComplete) onRegistrationComplete(result.descriptor);
+            }, 1200);
           } else {
             throw new Error(result.error || 'Face registration failed');
           }
@@ -99,14 +85,14 @@ const FaceRegistration = ({ userData, onRegistrationComplete, onSkip }) => {
           setError(error.message);
           setStep('error');
         } finally {
-          setIsProcessing(false);
+          // no processing state toggle needed; step controls the UI
         }
       };
       img.src = imageDataUrl;
     } catch (error) {
       setError(error.message);
       setStep('error');
-      setIsProcessing(false);
+      // no processing state toggle needed; step controls the UI
     }
   };
 
@@ -140,6 +126,7 @@ const FaceRegistration = ({ userData, onRegistrationComplete, onSkip }) => {
               <li>• Keep your face centered</li>
               <li>• Remove glasses if possible</li>
               <li>• Avoid shadows on your face</li>
+              <li>• Your face data will be linked to your account after you finish registration</li>
             </ul>
           </div>
         </div>

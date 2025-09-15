@@ -458,9 +458,9 @@ const StudentDashboard = ({ onLogout }) => {
         },
         {
           location: attendanceProcess.studentLocation,
-          locationVerified: attendanceProcess.locationVerified || true,
-          qrVerified: attendanceProcess.qrScanned || true,
-          faceVerified: attendanceProcess.faceVerified || true
+          locationVerified: !!attendanceProcess.locationVerified,
+          qrVerified: !!attendanceProcess.qrScanned,
+          faceVerified: !!attendanceProcess.faceVerified
         }
       );
 
@@ -843,22 +843,12 @@ const StudentDashboard = ({ onLogout }) => {
               studentData={{
                 name: userData?.firstName && userData?.lastName 
                   ? `${userData.firstName} ${userData.lastName}` 
-                  : userData?.name || 'Student'
+                  : userData?.name || 'Student',
+                studentId: userData?.studentId || userData?.uid
               }}
+              expectedStudentId={userData?.studentId || userData?.uid}
             />
-            
-            {/* Temporary bypass for testing */}
-            <div className="mt-4">
-              <button
-                onClick={() => {
-                  console.log('🧪 Using bypass for testing - marking attendance...');
-                  handleFaceRecognitionSuccess({ confidence: 100, test: true });
-                }}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm w-full"
-              >
-                Skip Face Recognition (Test)
-              </button>
-            </div>
+
           </div>
         </div>
       );
