@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { LayoutDashboard, Users, BookOpen, BarChart2, GraduationCap, UserCheck, TrendingUp, Bell, Settings, Search, Upload, UserPlus, Trash2, Edit, Key, Check, CheckCircle, AlertCircle, Info, ChevronRight, FileText, Award, DollarSign, Activity, PieChart as PieChartLucide, Edit2, X, LogOut, Plus, Download, ClipboardCheck } from 'lucide-react';
-import { registerUser, logoutUser } from '../firebase/auth';
+import { registerUser, logoutUser, createStudent, createTeacher, createParent } from '../firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import {
@@ -41,7 +41,22 @@ const SchoolManagementDashboard = ({ onLogout }) => {
         department: '',
         employeeId: '',
         designation: '',
-        address: ''
+        address: '',
+        // Student specific fields
+        dateOfBirth: '',
+        parentContact: '',
+        admissionDate: '',
+        // Teacher specific fields
+        qualification: '',
+        experience: '',
+        dateOfJoining: '',
+        salary: '',
+        // Parent specific fields
+        occupation: '',
+        alternatePhone: '',
+        emergencyContact: '',
+        relationship: '',
+        children: []
     });
 
     // State for real Firebase data
@@ -163,7 +178,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
 
     const showNotification = (message, type = 'success') => {
         setNotification({ message, type });
-        setTimeout(() => setNotification(''), 3000);
+        setTimeout(() => setNotification(''), 5000); // Show for 5 seconds
     };
 
     const handleAddUser = (type) => {
@@ -180,7 +195,22 @@ const SchoolManagementDashboard = ({ onLogout }) => {
             department: '',
             employeeId: '',
             designation: '',
-            address: ''
+            address: '',
+            // Student specific fields
+            dateOfBirth: '',
+            parentContact: '',
+            admissionDate: '',
+            // Teacher specific fields
+            qualification: '',
+            experience: '',
+            dateOfJoining: '',
+            salary: '',
+            // Parent specific fields
+            occupation: '',
+            alternatePhone: '',
+            emergencyContact: '',
+            relationship: '',
+            children: []
         });
     };
 
@@ -261,80 +291,93 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                 const teacherData = {
                     name: formData.name,
                     email: formData.email,
-                    role: 'teacher',
                     phone: formData.phone,
                     subject: formData.subject,
                     department: formData.department,
                     employeeId: formData.employeeId,
                     designation: formData.designation,
                     address: formData.address,
-                    dateOfJoining: new Date().toISOString().split('T')[0]
+                    qualification: formData.qualification,
+                    experience: formData.experience,
+                    dateOfJoining: formData.dateOfJoining || new Date().toISOString().split('T')[0],
+                    salary: formData.salary,
+                    subjects: formData.subject ? [formData.subject] : [],
+                    classesAssigned: []
                 };
 
                 if (selectedUser) {
-                    // Update existing teacher
-                    setUsers(prev => ({
-                        ...prev,
-                        teachers: prev.teachers.map(t => 
-                            t.id === selectedUser.id 
-                                ? { ...t, ...teacherData, id: t.id }
-                                : t
-                        )
-                    }));
-                    showNotification('Teacher updated successfully');
+                    // TODO: Implement update functionality
+                    showNotification('Teacher update functionality coming soon', 'info');
                 } else {
-                    // Create new teacher
-                    await registerUser(formData.email, formData.password, teacherData);
+                    // Create new teacher using Firebase
+                    const result = await createTeacher(formData.email, formData.password, teacherData);
                     
-                    // Add to local state (in real app, you'd fetch from Firebase)
-                    const newTeacher = {
-                        id: 'T' + String(Date.now()).slice(-3),
-                        ...teacherData,
-                        classes: 0
-                    };
-                    
-                    setUsers(prev => ({
-                        ...prev,
-                        teachers: [...prev.teachers, newTeacher]
-                    }));
-                    showNotification('Teacher added successfully');
+                    if (result.success) {
+                        // Reload the users to show the new teacher
+                        await loadDashboardData();
+                        showNotification('Teacher added successfully to Firebase database');
+                    } else {
+                        throw new Error(result.error);
+                    }
                 }
             } else if (modalType === 'students') {
-                // Handle student creation/update
+                // Handle student creation
                 const studentData = {
                     name: formData.name,
                     email: formData.email,
-                    role: 'student',
                     phone: formData.phone,
                     class: formData.class,
-                    studentId: formData.employeeId || 'ST' + String(Date.now()).slice(-3)
+                    department: formData.department,
+                    address: formData.address,
+                    studentId: formData.employeeId,
+                    dateOfBirth: formData.dateOfBirth,
+                    parentContact: formData.parentContact,
+                    admissionDate: formData.admissionDate || new Date().toISOString().split('T')[0]
                 };
 
                 if (selectedUser) {
-                    setUsers(prev => ({
-                        ...prev,
-                        students: prev.students.map(s => 
-                            s.id === selectedUser.id 
-                                ? { ...s, ...studentData, id: s.id }
-                                : s
-                        )
-                    }));
-                    showNotification('Student updated successfully');
+                    // TODO: Implement update functionality
+                    showNotification('Student update functionality coming soon', 'info');
                 } else {
-                    await registerUser(formData.email, formData.password, studentData);
+                    // Create new student using Firebase
+                    const result = await createStudent(formData.email, formData.password, studentData);
                     
-                    const newStudent = {
-                        id: studentData.studentId,
-                        ...studentData,
-                        status: 'approved',
-                        attendance: 0
-                    };
+                    if (result.success) {
+                        // Reload the users to show the new student
+                        await loadDashboardData();
+                        showNotification('Student added successfully to Firebase database');
+                    } else {
+                        throw new Error(result.error);
+                    }
+                }
+            } else if (modalType === 'parents') {
+                // Handle parent creation
+                const parentData = {
+                    name: formData.name,
+                    email: formData.email,
+                    phone: formData.phone,
+                    address: formData.address,
+                    occupation: formData.occupation,
+                    alternatePhone: formData.alternatePhone,
+                    emergencyContact: formData.emergencyContact,
+                    relationship: formData.relationship || 'Parent',
+                    children: formData.children || []
+                };
+
+                if (selectedUser) {
+                    // TODO: Implement update functionality
+                    showNotification('Parent update functionality coming soon', 'info');
+                } else {
+                    // Create new parent using Firebase
+                    const result = await createParent(formData.email, formData.password, parentData);
                     
-                    setUsers(prev => ({
-                        ...prev,
-                        students: [...prev.students, newStudent]
-                    }));
-                    showNotification('Student added successfully');
+                    if (result.success) {
+                        // Reload the users to show the new parent
+                        await loadDashboardData();
+                        showNotification('Parent added successfully to Firebase database');
+                    } else {
+                        throw new Error(result.error);
+                    }
                 }
             }
 
@@ -349,9 +392,22 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                 department: '',
                 employeeId: '',
                 designation: '',
-                address: ''
+                address: '',
+                qualification: '',
+                experience: '',
+                dateOfJoining: '',
+                salary: '',
+                dateOfBirth: '',
+                parentContact: '',
+                admissionDate: '',
+                occupation: '',
+                alternatePhone: '',
+                emergencyContact: '',
+                relationship: '',
+                children: []
             });
         } catch (error) {
+            console.error('Error adding user:', error);
             showNotification(error.message, 'error');
         } finally {
             setLoading(false);
@@ -1460,6 +1516,38 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                                             onChange={handleInputChange}
                                             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
+                                        <input
+                                            type="text"
+                                            name="department"
+                                            placeholder="Department"
+                                            value={formData.department}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="date"
+                                            name="dateOfBirth"
+                                            placeholder="Date of Birth"
+                                            value={formData.dateOfBirth}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="parentContact"
+                                            placeholder="Parent Contact Number"
+                                            value={formData.parentContact}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="date"
+                                            name="admissionDate"
+                                            placeholder="Admission Date"
+                                            value={formData.admissionDate}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
                                     </>
                                 )}
                                 
@@ -1468,7 +1556,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                                         <input
                                             type="text"
                                             name="subject"
-                                            placeholder="Subject/Department"
+                                            placeholder="Primary Subject"
                                             value={formData.subject}
                                             onChange={handleInputChange}
                                             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1484,7 +1572,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                                         <input
                                             type="text"
                                             name="employeeId"
-                                            placeholder="Employee ID"
+                                            placeholder="Employee ID (optional)"
                                             value={formData.employeeId}
                                             onChange={handleInputChange}
                                             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1497,6 +1585,75 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                                             onChange={handleInputChange}
                                             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
+                                        <input
+                                            type="text"
+                                            name="qualification"
+                                            placeholder="Qualification (e.g., PhD, M.Tech)"
+                                            value={formData.qualification}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="experience"
+                                            placeholder="Years of Experience"
+                                            value={formData.experience}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="date"
+                                            name="dateOfJoining"
+                                            placeholder="Date of Joining"
+                                            value={formData.dateOfJoining}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </>
+                                )}
+
+                                {modalType === 'parents' && (
+                                    <>
+                                        <input
+                                            type="text"
+                                            name="occupation"
+                                            placeholder="Occupation"
+                                            value={formData.occupation}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="alternatePhone"
+                                            placeholder="Alternate Phone Number"
+                                            value={formData.alternatePhone}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="emergencyContact"
+                                            placeholder="Emergency Contact"
+                                            value={formData.emergencyContact}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <select
+                                            name="relationship"
+                                            value={formData.relationship}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="">Select Relationship</option>
+                                            <option value="Father">Father</option>
+                                            <option value="Mother">Mother</option>
+                                            <option value="Guardian">Guardian</option>
+                                            <option value="Grandfather">Grandfather</option>
+                                            <option value="Grandmother">Grandmother</option>
+                                            <option value="Uncle">Uncle</option>
+                                            <option value="Aunt">Aunt</option>
+                                            <option value="Other">Other</option>
+                                        </select>
                                     </>
                                 )}
                                 
