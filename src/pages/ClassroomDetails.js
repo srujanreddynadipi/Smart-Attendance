@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { 
   ArrowLeft, 
   Users, 
@@ -29,6 +30,7 @@ const ClassroomDetails = () => {
   const { classroomId } = useParams();
   const navigate = useNavigate();
   const { userData } = useAuth();
+  const { showSuccess, showError, confirmDelete, showLoading, hideLoading } = useNotifications();
   const [classroom, setClassroom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -74,52 +76,67 @@ const ClassroomDetails = () => {
 
   const handleAddSubject = async () => {
     try {
+      showLoading('Adding subject...');
       const result = await addSubjectToClassroom(classroomId, newSubject);
       if (result.success) {
         await loadClassroomDetails(); // Reload to get updated data
         setNewSubject({ name: '', code: '', credits: '', description: '' });
         setShowAddSubject(false);
-        alert('Subject added successfully!');
+        hideLoading();
+        showSuccess(`Subject "${newSubject.name}" added successfully!`);
       } else {
-        alert('Failed to add subject: ' + result.error);
+        hideLoading();
+        showError('Failed to add subject: ' + result.error);
       }
     } catch (error) {
       console.error('Error adding subject:', error);
-      alert('Error adding subject');
+      hideLoading();
+      showError('Error adding subject. Please try again.');
     }
   };
 
   const handleUpdateSubject = async (subjectId, updatedData) => {
     try {
+      showLoading('Updating subject...');
       const result = await updateSubject(classroomId, subjectId, updatedData);
       if (result.success) {
         await loadClassroomDetails();
         setEditingSubject(null);
-        alert('Subject updated successfully!');
+        hideLoading();
+        showSuccess('Subject updated successfully!');
       } else {
-        alert('Failed to update subject: ' + result.error);
+        hideLoading();
+        showError('Failed to update subject: ' + result.error);
       }
     } catch (error) {
       console.error('Error updating subject:', error);
-      alert('Error updating subject');
+      hideLoading();
+      showError('Error updating subject. Please try again.');
     }
   };
 
-  const handleDeleteSubject = async (subjectId) => {
-    if (window.confirm('Are you sure you want to delete this subject?')) {
-      try {
-        const result = await deleteSubject(classroomId, subjectId);
-        if (result.success) {
-          await loadClassroomDetails();
-          alert('Subject deleted successfully!');
-        } else {
-          alert('Failed to delete subject: ' + result.error);
+  const handleDeleteSubject = async (subject) => {
+    const confirmed = await confirmDelete(
+      subject.name,
+      async () => {
+        try {
+          showLoading('Deleting subject...');
+          const result = await deleteSubject(classroomId, subject.id);
+          if (result.success) {
+            await loadClassroomDetails();
+            hideLoading();
+            showSuccess(`Subject "${subject.name}" deleted successfully!`);
+          } else {
+            hideLoading();
+            showError('Failed to delete subject: ' + result.error);
+          }
+        } catch (error) {
+          console.error('Error deleting subject:', error);
+          hideLoading();
+          showError('Error deleting subject. Please try again.');
         }
-      } catch (error) {
-        console.error('Error deleting subject:', error);
-        alert('Error deleting subject');
       }
-    }
+    );
   };
 
   const copyClassroomCode = () => {
@@ -327,7 +344,7 @@ const ClassroomDetails = () => {
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteSubject(subject.id)}
+                            onClick={() => handleDeleteSubject(subject)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />

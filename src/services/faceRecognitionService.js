@@ -207,6 +207,21 @@ class FaceRecognitionService {
 
     return { valid: true, message: 'Face quality is good' };
   }
+
+  // Compute distance between two face descriptors
+  computeFaceDistance(descriptor1, descriptor2) {
+    if (!descriptor1 || !descriptor2) {
+      return 1; // Maximum distance if either descriptor is missing
+    }
+    
+    try {
+      // Use face-api.js euclidean distance calculation
+      return faceapi.euclideanDistance(descriptor1, descriptor2);
+    } catch (error) {
+      console.error('Error computing face distance:', error);
+      return 1; // Return max distance on error
+    }
+  }
 }
 
 // Export singleton instance

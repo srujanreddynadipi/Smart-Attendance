@@ -26,6 +26,7 @@ import {
   School
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { logoutUser } from '../firebase/auth';
 import QRScanner from '../components/QRScanner';
 import FaceRecognition from '../components/FaceRecognition';
@@ -46,6 +47,7 @@ import ProfilePage from './ProfilePage';
 
 const StudentDashboard = ({ onLogout }) => {
   const { userData } = useAuth();
+  const { showSuccess, showError, showWarning, showInfo } = useNotifications();
   const [currentStep, setCurrentStep] = useState('home'); // home, scan, location, face, success, profile
   const [studentData, setStudentData] = useState({
     name: userData?.name || 'John Doe',
@@ -167,7 +169,7 @@ const StudentDashboard = ({ onLogout }) => {
         ]);
         
         if (attendanceResult.success && gradesResult.success) {
-          alert('Sample data added successfully! Refreshing dashboard...');
+          showSuccess('Sample data added successfully! Refreshing dashboard...');
           // Reload dashboard data
           const result = await getStudentDashboardData(studentId);
           if (result.success) {
@@ -191,11 +193,11 @@ const StudentDashboard = ({ onLogout }) => {
             setSubjectMarks(transformedSubjects);
           }
         } else {
-          alert('Error adding sample data: ' + (attendanceResult.error || gradesResult.error));
+          showError('Error adding sample data: ' + (attendanceResult.error || gradesResult.error));
         }
       } catch (error) {
         console.error('Error adding sample data:', error);
-        alert('Error adding sample data: ' + error.message);
+        showError('Error adding sample data: ' + error.message);
       }
     }
   };
@@ -233,16 +235,16 @@ const StudentDashboard = ({ onLogout }) => {
       const result = await joinClassroom(studentId, studentData, classroomCode.trim());
       
       if (result.success) {
-        alert(result.message);
+        showSuccess(result.message);
         setClassroomCode('');
         setShowJoinClassroom(false);
         loadStudentClassrooms(); // Refresh classrooms
       } else {
-        alert('Error: ' + result.error);
+        showError('Error: ' + result.error);
       }
     } catch (error) {
       console.error('Error joining classroom:', error);
-      alert('Error joining classroom: ' + error.message);
+      showError('Error joining classroom: ' + error.message);
     } finally {
       setJoinLoading(false);
     }
@@ -278,7 +280,7 @@ const StudentDashboard = ({ onLogout }) => {
       console.log('📊 Parsed session data:', parsedSessionData);
     } catch (parseError) {
       console.error('❌ Error parsing QR data:', parseError);
-      alert('Invalid QR code data. Please scan a valid attendance QR code.');
+      showError('Invalid QR code data. Please scan a valid attendance QR code.');
       setCurrentStep('home');
       return;
     }
@@ -286,7 +288,7 @@ const StudentDashboard = ({ onLogout }) => {
     // Validate session data structure
     if (!parsedSessionData.sessionId || !parsedSessionData.location) {
       console.error('❌ Invalid session data structure:', parsedSessionData);
-      alert('Invalid QR code. Missing session or location data.');
+      showError('Invalid QR code. Missing session or location data.');
       setCurrentStep('home');
       return;
     }
@@ -304,7 +306,7 @@ const StudentDashboard = ({ onLogout }) => {
   // Handle QR scan error
   const handleQRScanError = (error) => {
     console.error('QR scan error:', error);
-    alert('Failed to scan QR code. Please try again.');
+    showError('Failed to scan QR code. Please try again.');
     setCurrentStep('home');
   };
 
@@ -320,7 +322,7 @@ const StudentDashboard = ({ onLogout }) => {
         console.log('✅ Location permission granted');
       } catch (permissionError) {
         console.error('❌ Location permission error:', permissionError.message);
-        alert(permissionError.message);
+        showError(permissionError.message);
         setCurrentStep('home');
         return;
       }
@@ -335,7 +337,7 @@ const StudentDashboard = ({ onLogout }) => {
       
       if (!sessionLocation) {
         console.error('❌ Session location not available');
-        alert('Session location data not found. Please try scanning the QR code again.');
+        showError('Session location data not found. Please try scanning the QR code again.');
         setCurrentStep('home');
         return;
       }
@@ -371,7 +373,7 @@ const StudentDashboard = ({ onLogout }) => {
         console.log('   GPS accuracy:', `${studentLocation.accuracy}m`);
         
         // Show detailed error message
-        alert(
+        showError(
           `Location Verification Failed\n\n` +
           `Calculated distance: ${verificationResult.distance}m\n` +
           `Tolerance used: ${verificationResult.tolerance}m\n` +
@@ -385,13 +387,13 @@ const StudentDashboard = ({ onLogout }) => {
     } catch (error) {
       console.error('❌ Location verification error:', error);
       if (error.message.includes('denied')) {
-        alert('Location access denied. Please enable location permissions in your browser settings and try again.');
+        showError('Location access denied. Please enable location permissions in your browser settings and try again.');
       } else if (error.message.includes('unavailable')) {
-        alert('Location information unavailable. Please check your GPS and try again.');
+        showError('Location information unavailable. Please check your GPS and try again.');
       } else if (error.message.includes('timeout')) {
-        alert('Location request timed out. Please try again.');
+        showError('Location request timed out. Please try again.');
       } else {
-        alert('Location verification failed. Please ensure location is enabled and try again.');
+        showError('Location verification failed. Please ensure location is enabled and try again.');
       }
       setCurrentStep('home');
     }
@@ -414,7 +416,7 @@ const StudentDashboard = ({ onLogout }) => {
   // Handle face recognition error
   const handleFaceRecognitionError = (error) => {
     console.error('Face recognition error:', error);
-    alert('Face recognition failed. Please try again.');
+    showError('Face recognition failed. Please try again.');
     setCurrentStep('home');
   };
 
@@ -432,13 +434,13 @@ const StudentDashboard = ({ onLogout }) => {
 
       if (!attendanceProcess.sessionData) {
         console.error('❌ No session data available');
-        alert('Session data not available');
+        showError('Session data not available');
         return;
       }
 
       if (!userData) {
         console.error('❌ No user data available');
-        alert('User data not available');
+        showError('User data not available');
         return;
       }
 
@@ -498,7 +500,7 @@ const StudentDashboard = ({ onLogout }) => {
       }
     } catch (error) {
       console.error('Error marking attendance:', error);
-      alert('Failed to mark attendance. Please try again.');
+      showError('Failed to mark attendance. Please try again.');
       setCurrentStep('home');
     }
   };

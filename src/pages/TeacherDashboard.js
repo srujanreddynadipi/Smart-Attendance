@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { logoutUser } from '../firebase/auth';
 import QRGenerator from '../components/QRGenerator';
 import { 
@@ -34,6 +35,7 @@ import { getTeacherClassrooms } from '../firebase/classrooms';
 
 const TeacherDashboard = ({ onLogout }) => {
   const { userData } = useAuth();
+  const { confirmDialog, showSuccess, showError } = useNotifications();
   const navigate = useNavigate();
   const [showQRGenerator, setShowQRGenerator] = useState(false);
   const [activeSessions, setActiveSessions] = useState([]);
@@ -150,20 +152,27 @@ const TeacherDashboard = ({ onLogout }) => {
   };
 
   const handleEndSession = async (sessionId) => {
-    if (window.confirm('Are you sure you want to end this session?')) {
+    const confirmed = await confirmDialog(
+      'End Session',
+      'Are you sure you want to end this session? This action cannot be undone.'
+    );
+    
+    if (confirmed) {
       try {
         const result = await endAttendanceSession(sessionId);
         if (result.success) {
+          showSuccess('Session ended successfully');
           await loadActiveSessions();
           if (selectedSession?.sessionId === sessionId) {
             setSelectedSession(null);
             setSessionAttendance([]);
           }
         } else {
-          setError(result.error);
+          showError(result.error || 'Failed to end session');
         }
       } catch (error) {
-        setError('Failed to end session');
+        console.error('Error ending session:', error);
+        showError('Failed to end session. Please try again.');
       }
     }
   };

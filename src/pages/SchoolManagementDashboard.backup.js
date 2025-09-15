@@ -16,12 +16,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
     const { userData } = useAuth();
     const { confirmDialog, showSuccess, showError } = useNotifications();
     const [activeTab, setActiveTab] = useState('overview');
-    const [detailView, setDetailView] = useState(null); // 'students', 'teachers', 'parents', or null
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [classFilter, setClassFilter] = useState('all');
-    const [attendanceFilter, setAttendanceFilter] = useState('all');
-    const [subjectFilter, setSubjectFilter] = useState('all');
     const [showAddModal, setShowAddModal] = useState(false);
     const [modalType, setModalType] = useState('');
     const [selectedUser, setSelectedUser] = useState(null);
@@ -139,27 +134,6 @@ const SchoolManagementDashboard = ({ onLogout }) => {
     useEffect(() => {
         loadDashboardData();
     }, []);
-
-    // Handle navigation to detailed views
-    const handleViewDetails = (viewType) => {
-        setDetailView(viewType);
-        // Reset filters when switching views
-        setSearchTerm('');
-        setStatusFilter('all');
-        setClassFilter('all');
-        setAttendanceFilter('all');
-        setSubjectFilter('all');
-    };
-
-    const handleBackToOverview = () => {
-        setDetailView(null);
-        // Reset filters when going back
-        setSearchTerm('');
-        setStatusFilter('all');
-        setClassFilter('all');
-        setAttendanceFilter('all');
-        setSubjectFilter('all');
-    };
 
     const showNotification = (message, type = 'success') => {
         setNotification({ message, type });
@@ -393,10 +367,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
             {/* Stats Cards */}
             {!dashboardLoading && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div 
-                        onClick={() => handleViewDetails('students')}
-                        className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50 hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105"
-                    >
+                    <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50 hover:shadow-2xl transition-all duration-300">
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-14 h-14 bg-gradient-to-r from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center">
                                 <Users className="w-7 h-7 text-blue-600" />
@@ -405,13 +376,9 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                         </div>
                         <h3 className="text-3xl font-bold text-gray-800">{analytics.totalStudents}</h3>
                         <p className="text-sm text-gray-600 mt-1">Total Students</p>
-                        <p className="text-xs text-blue-600 mt-2 hover:text-blue-800">Click to view details →</p>
                     </div>
 
-                    <div 
-                        onClick={() => handleViewDetails('teachers')}
-                        className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50 hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105"
-                    >
+                    <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50 hover:shadow-2xl transition-all duration-300">
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-14 h-14 bg-gradient-to-r from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center">
                                 <GraduationCap className="w-7 h-7 text-purple-600" />
@@ -420,13 +387,9 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                         </div>
                         <h3 className="text-3xl font-bold text-gray-800">{analytics.totalTeachers}</h3>
                         <p className="text-sm text-gray-600 mt-1">Total Teachers</p>
-                        <p className="text-xs text-purple-600 mt-2 hover:text-purple-800">Click to view details →</p>
                     </div>
 
-                    <div 
-                        onClick={() => handleViewDetails('parents')}
-                        className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50 hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105"
-                    >
+                    <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50 hover:shadow-2xl transition-all duration-300">
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-14 h-14 bg-gradient-to-r from-pink-100 to-pink-200 rounded-2xl flex items-center justify-center">
                                 <UserCheck className="w-7 h-7 text-pink-600" />
@@ -435,7 +398,6 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                         </div>
                         <h3 className="text-3xl font-bold text-gray-800">{analytics.totalParents}</h3>
                         <p className="text-sm text-gray-600 mt-1">Total Parents</p>
-                        <p className="text-xs text-pink-600 mt-2 hover:text-pink-800">Click to view details →</p>
                     </div>
 
                     <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50 hover:shadow-2xl transition-all duration-300">
@@ -469,11 +431,22 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
+                        <LineChart data={analytics.monthlyData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                            <XAxis dataKey="month" stroke="#666" />
+                            <YAxis stroke="#666" />
+                            <Tooltip />
+                            <Legend />
+                            <Line type="monotone" dataKey="students" stroke="#3B82F6" strokeWidth={2} name="Students" />
+                            <Line type="monotone" dataKey="attendance" stroke="#10B981" strokeWidth={2} name="Attendance %" />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
 
-                    {/* Department Distribution */}
-                    <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
-                        <h3 className="text-xl font-bold text-gray-800 mb-6">Department Distribution</h3>
-                        <ResponsiveContainer width="100%" height={250}>
+                {/* Department Distribution */}
+                <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
+                    <h3 className="text-xl font-bold text-gray-800 mb-6">Department Distribution</h3>
+                    <ResponsiveContainer width="100%" height={250}>
                         <PieChart>
                             <Pie
                                 data={analytics.departmentData}
@@ -541,289 +514,6 @@ const SchoolManagementDashboard = ({ onLogout }) => {
             )}
         </div>
     );
-
-    // Render detailed student list
-    const renderStudentDetails = () => {
-        const filteredStudents = users.students.filter(student => {
-            if (statusFilter !== 'all' && student.status !== statusFilter) return false;
-            if (classFilter !== 'all' && student.class !== classFilter) return false;
-            if (attendanceFilter === 'high' && student.attendance < 90) return false;
-            if (attendanceFilter === 'medium' && (student.attendance < 70 || student.attendance >= 90)) return false;
-            if (attendanceFilter === 'low' && student.attendance >= 70) return false;
-            if (searchTerm && !student.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-                !student.email.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-            return true;
-        });
-
-        const uniqueClasses = [...new Set(users.students.map(s => s.class).filter(Boolean))];
-
-        return (
-            <div className="space-y-6 animate-slide-in">
-                {/* Header with Back Button */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={handleBackToOverview}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-                        >
-                            <ChevronRight className="w-4 h-4 rotate-180" />
-                            Back to Overview
-                        </button>
-                        <h2 className="text-2xl font-bold text-gray-800">Student Details</h2>
-                        <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-                            {filteredStudents.length} Students
-                        </span>
-                    </div>
-                </div>
-
-                {/* Filters */}
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-                    <div className="flex flex-wrap gap-4 mb-4">
-                        <div className="flex items-center gap-2">
-                            <Search className="w-4 h-4 text-gray-500" />
-                            <input
-                                type="text"
-                                placeholder="Search students..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                        </div>
-                        
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            <option value="all">All Status</option>
-                            <option value="approved">Approved</option>
-                            <option value="pending">Pending</option>
-                        </select>
-
-                        <select
-                            value={classFilter}
-                            onChange={(e) => setClassFilter(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            <option value="all">All Classes</option>
-                            {uniqueClasses.map(cls => (
-                                <option key={cls} value={cls}>{cls}</option>
-                            ))}
-                        </select>
-
-                        <select
-                            value={attendanceFilter}
-                            onChange={(e) => setAttendanceFilter(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            <option value="all">All Attendance</option>
-                            <option value="high">High (90%+)</option>
-                            <option value="medium">Medium (70-89%)</option>
-                            <option value="low">Low (&lt;70%)</option>
-                        </select>
-                    </div>
-                </div>
-
-                {/* Student List */}
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-                    <div className="space-y-3">
-                        {filteredStudents.map(student => (
-                            <div key={student.id} className="flex items-center justify-between p-4 bg-white/50 rounded-xl hover:bg-white/70 transition-all duration-300">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
-                                        <Users className="w-6 h-6 text-blue-600" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-800">{student.name}</h3>
-                                        <p className="text-sm text-gray-600">{student.email}</p>
-                                        <p className="text-xs text-gray-500">Class: {student.class}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="text-center">
-                                        <p className="text-lg font-bold text-gray-800">{student.attendance || 0}%</p>
-                                        <p className="text-xs text-gray-500">Attendance</p>
-                                    </div>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                        student.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                                    }`}>
-                                        {student.status || 'Pending'}
-                                    </span>
-                                    <button className="p-2 text-gray-500 hover:text-blue-600 transition-colors">
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    // Render detailed teacher list  
-    const renderTeacherDetails = () => {
-        const filteredTeachers = users.teachers.filter(teacher => {
-            if (subjectFilter !== 'all' && teacher.subject !== subjectFilter) return false;
-            if (searchTerm && !teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-                !teacher.email.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-            return true;
-        });
-
-        const uniqueSubjects = [...new Set(users.teachers.map(t => t.subject).filter(Boolean))];
-
-        return (
-            <div className="space-y-6 animate-slide-in">
-                {/* Header with Back Button */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={handleBackToOverview}
-                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
-                        >
-                            <ChevronRight className="w-4 h-4 rotate-180" />
-                            Back to Overview
-                        </button>
-                        <h2 className="text-2xl font-bold text-gray-800">Teacher Details</h2>
-                        <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
-                            {filteredTeachers.length} Teachers
-                        </span>
-                    </div>
-                </div>
-
-                {/* Filters */}
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-                    <div className="flex flex-wrap gap-4 mb-4">
-                        <div className="flex items-center gap-2">
-                            <Search className="w-4 h-4 text-gray-500" />
-                            <input
-                                type="text"
-                                placeholder="Search teachers..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                            />
-                        </div>
-                        
-                        <select
-                            value={subjectFilter}
-                            onChange={(e) => setSubjectFilter(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                        >
-                            <option value="all">All Subjects</option>
-                            {uniqueSubjects.map(subject => (
-                                <option key={subject} value={subject}>{subject}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-
-                {/* Teacher List */}
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-                    <div className="space-y-3">
-                        {filteredTeachers.map(teacher => (
-                            <div key={teacher.id} className="flex items-center justify-between p-4 bg-white/50 rounded-xl hover:bg-white/70 transition-all duration-300">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl flex items-center justify-center">
-                                        <GraduationCap className="w-6 h-6 text-purple-600" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-800">{teacher.name}</h3>
-                                        <p className="text-sm text-gray-600">{teacher.email}</p>
-                                        <p className="text-xs text-gray-500">Subject: {teacher.subject}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="text-center">
-                                        <p className="text-lg font-bold text-gray-800">{teacher.classes || 0}</p>
-                                        <p className="text-xs text-gray-500">Classes</p>
-                                    </div>
-                                    <button className="p-2 text-gray-500 hover:text-purple-600 transition-colors">
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    // Render detailed parent list
-    const renderParentDetails = () => {
-        const filteredParents = users.parents.filter(parent => {
-            if (searchTerm && !parent.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-                !parent.email.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-            return true;
-        });
-
-        return (
-            <div className="space-y-6 animate-slide-in">
-                {/* Header with Back Button */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={handleBackToOverview}
-                            className="flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-xl hover:bg-pink-700 transition-colors"
-                        >
-                            <ChevronRight className="w-4 h-4 rotate-180" />
-                            Back to Overview
-                        </button>
-                        <h2 className="text-2xl font-bold text-gray-800">Parent Details</h2>
-                        <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-semibold">
-                            {filteredParents.length} Parents
-                        </span>
-                    </div>
-                </div>
-
-                {/* Filters */}
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-                    <div className="flex flex-wrap gap-4 mb-4">
-                        <div className="flex items-center gap-2">
-                            <Search className="w-4 h-4 text-gray-500" />
-                            <input
-                                type="text"
-                                placeholder="Search parents..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Parent List */}
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-                    <div className="space-y-3">
-                        {filteredParents.map(parent => (
-                            <div key={parent.id} className="flex items-center justify-between p-4 bg-white/50 rounded-xl hover:bg-white/70 transition-all duration-300">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-gradient-to-r from-pink-100 to-pink-200 rounded-xl flex items-center justify-center">
-                                        <UserCheck className="w-6 h-6 text-pink-600" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-800">{parent.name}</h3>
-                                        <p className="text-sm text-gray-600">{parent.email}</p>
-                                        <p className="text-xs text-gray-500">Phone: {parent.phone}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="text-center">
-                                        <p className="text-lg font-bold text-gray-800">{parent.children ? parent.children.length : 0}</p>
-                                        <p className="text-xs text-gray-500">Children</p>
-                                    </div>
-                                    <button className="p-2 text-gray-500 hover:text-pink-600 transition-colors">
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    };
 
     const renderUserManagement = () => {
         const getUsersByRole = () => {
@@ -1383,10 +1073,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                 </div>
 
                 {/* Content Area */}
-                {activeTab === 'overview' && !detailView && renderOverview()}
-                {activeTab === 'overview' && detailView === 'students' && renderStudentDetails()}
-                {activeTab === 'overview' && detailView === 'teachers' && renderTeacherDetails()}
-                {activeTab === 'overview' && detailView === 'parents' && renderParentDetails()}
+                {activeTab === 'overview' && renderOverview()}
                 {activeTab === 'users' && renderUserManagement()}
                 {activeTab === 'academic' && renderAcademicManagement()}
                 {activeTab === 'reports' && renderReports()}

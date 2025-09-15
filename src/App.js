@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Login from './pages/Login';
 import RegisterPage from './pages/RegisterPage';
 import TeacherDashboard from './pages/TeacherDashboard';
@@ -128,7 +129,9 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppContent />
+        <NotificationProvider>
+          <AppContent />
+        </NotificationProvider>
       </AuthProvider>
     </Router>
   );
