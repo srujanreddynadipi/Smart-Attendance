@@ -198,42 +198,43 @@ const TeacherDashboard = ({ onLogout }) => {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 safe-area-top safe-area-bottom">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-200 to-pink-200 rounded-full opacity-20 blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-200 to-purple-200 rounded-full opacity-20 blur-3xl"></div>
       </div>
 
-      <div className="relative z-10 p-6">
+      <div className="relative z-10 p-4 sm:p-6">
         {/* Header */}
-        <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50 mb-8">
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50 mb-6 sm:mb-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center">
-                <User className="w-8 h-8 text-blue-600" />
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
+                <User className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-800">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800">
                   Welcome, {userData?.firstName || 'Teacher'}!
                 </h1>
-                <p className="text-lg text-gray-600">Manage your class attendance efficiently</p>
+                <p className="text-sm sm:text-base lg:text-lg text-gray-600 hidden sm:block">Manage your class attendance efficiently</p>
+                <p className="text-xs text-gray-600 sm:hidden">Attendance Management</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <button
                 onClick={() => loadActiveSessions()}
-                className="bg-blue-100 text-blue-700 p-3 rounded-xl hover:bg-blue-200 transition-all duration-300"
+                className="bg-blue-100 text-blue-700 p-2 sm:p-3 rounded-xl hover:bg-blue-200 transition-all duration-300"
                 title="Refresh"
               >
-                <RefreshCw className="w-5 h-5" />
+                <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
                 onClick={handleLogout}
-                className="bg-red-100 text-red-700 p-3 rounded-xl hover:bg-red-200 transition-all duration-300"
+                className="bg-red-100 text-red-700 p-2 sm:p-3 rounded-xl hover:bg-red-200 transition-all duration-300"
                 title="Logout"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>
@@ -241,13 +242,13 @@ const TeacherDashboard = ({ onLogout }) => {
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
+          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 sm:mb-6 text-sm sm:text-base">
             {error}
           </div>
         )}
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Column - Controls */}
           <div className="space-y-8">
             {/* Quick Actions */}

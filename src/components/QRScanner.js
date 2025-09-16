@@ -105,23 +105,23 @@ const QRScanner = ({ onScanSuccess, onClose, isActive = true }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 safe-area-top safe-area-bottom">
+      <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="p-4 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Scan className="w-4 h-4 text-blue-600" />
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-800">Scan QR Code</h3>
-                <p className="text-sm text-gray-600">Position QR code in the camera frame</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-gray-800 text-sm sm:text-base">Scan QR Code</h3>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Position QR code in the camera frame</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-300 transition-colors"
+              className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-300 transition-colors flex-shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -129,7 +129,7 @@ const QRScanner = ({ onScanSuccess, onClose, isActive = true }) => {
         </div>
 
         {/* Scanner Content */}
-        <div className="p-4">
+        <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
           {error ? (
             <div className="text-center py-8">
               <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -166,19 +166,19 @@ const QRScanner = ({ onScanSuccess, onClose, isActive = true }) => {
               <div className="relative bg-black rounded-xl overflow-hidden">
                 <video
                   ref={videoRef}
-                  className="w-full h-64 object-cover"
+                  className="w-full h-48 sm:h-64 object-cover"
                   playsInline
                   muted
                 />
                 
                 {/* Scanning Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-48 h-48 border-2 border-white rounded-2xl relative">
+                  <div className="w-32 h-32 sm:w-48 sm:h-48 border-2 border-white rounded-2xl relative">
                     {/* Corner markers */}
-                    <div className="absolute top-0 left-0 w-6 h-6 border-l-4 border-t-4 border-blue-500 rounded-tl-lg"></div>
-                    <div className="absolute top-0 right-0 w-6 h-6 border-r-4 border-t-4 border-blue-500 rounded-tr-lg"></div>
-                    <div className="absolute bottom-0 left-0 w-6 h-6 border-l-4 border-b-4 border-blue-500 rounded-bl-lg"></div>
-                    <div className="absolute bottom-0 right-0 w-6 h-6 border-r-4 border-b-4 border-blue-500 rounded-br-lg"></div>
+                    <div className="absolute top-0 left-0 w-4 h-4 sm:w-6 sm:h-6 border-l-4 border-t-4 border-blue-500 rounded-tl-lg"></div>
+                    <div className="absolute top-0 right-0 w-4 h-4 sm:w-6 sm:h-6 border-r-4 border-t-4 border-blue-500 rounded-tr-lg"></div>
+                    <div className="absolute bottom-0 left-0 w-4 h-4 sm:w-6 sm:h-6 border-l-4 border-b-4 border-blue-500 rounded-bl-lg"></div>
+                    <div className="absolute bottom-0 right-0 w-4 h-4 sm:w-6 sm:h-6 border-r-4 border-b-4 border-blue-500 rounded-br-lg"></div>
                     
                     {/* Scanning line */}
                     {isScanning && (
@@ -193,19 +193,19 @@ const QRScanner = ({ onScanSuccess, onClose, isActive = true }) => {
                 {isScanning ? (
                   <div className="flex items-center justify-center gap-2 text-blue-600">
                     <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-sm">Scanning for QR code...</span>
+                    <span className="text-xs sm:text-sm">Scanning for QR code...</span>
                   </div>
                 ) : (
-                  <p className="text-gray-600 text-sm">Camera loading...</p>
+                  <p className="text-gray-600 text-xs sm:text-sm">Camera loading...</p>
                 )}
               </div>
 
               {/* Controls */}
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={restartScanning}
                   disabled={!qrScanner}
-                  className="flex-1 flex items-center justify-center gap-2 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 py-2 sm:py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors text-sm sm:text-base"
                 >
                   <RefreshCw className="w-4 h-4" />
                   Restart
@@ -213,7 +213,7 @@ const QRScanner = ({ onScanSuccess, onClose, isActive = true }) => {
                 <button
                   onClick={stopScanning}
                   disabled={!isScanning}
-                  className="flex-1 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 transition-colors"
+                  className="flex-1 py-2 sm:py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 transition-colors text-sm sm:text-base"
                 >
                   Stop
                 </button>

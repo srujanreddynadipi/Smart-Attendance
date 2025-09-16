@@ -507,98 +507,98 @@ const StudentDashboard = ({ onLogout }) => {
 
   // Home Dashboard
   const HomeDashboard = () => (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-r from-green-100 to-blue-100 rounded-2xl flex items-center justify-center">
-              <Calendar className="w-8 h-8 text-green-600" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-green-100 to-blue-100 rounded-xl sm:rounded-2xl flex items-center justify-center">
+              <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
             </div>
-            <div>
-              <div className="text-3xl font-bold text-gray-800">{attendancePercentage}%</div>
-              <div className="text-gray-600">Attendance Rate</div>
-              <div className="text-sm text-gray-500">{attendanceStats.present + attendanceStats.late}/{attendanceStats.total} Classes</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center">
-              <TrendingUp className="w-8 h-8 text-purple-600" />
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-gray-800">{overallPercentage}%</div>
-              <div className="text-gray-600">Overall Grade</div>
-              <div className="text-sm text-gray-500">Across {subjectMarks.length} subjects</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-800">{attendancePercentage}%</div>
+              <div className="text-sm sm:text-base text-gray-600">Attendance Rate</div>
+              <div className="text-xs sm:text-sm text-gray-500">{attendanceStats.present + attendanceStats.late}/{attendanceStats.total} Classes</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-r from-orange-100 to-red-100 rounded-2xl flex items-center justify-center">
-              <Target className="w-8 h-8 text-orange-600" />
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl sm:rounded-2xl flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
             </div>
-            <div>
-              <div className="text-3xl font-bold text-gray-800">4.2</div>
-              <div className="text-gray-600">CGPA</div>
-              <div className="text-sm text-gray-500">Current Semester</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-800">{overallPercentage}%</div>
+              <div className="text-sm sm:text-base text-gray-600">Overall Grade</div>
+              <div className="text-xs sm:text-sm text-gray-500">Across {subjectMarks.length} subjects</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50 sm:col-span-2 lg:col-span-1">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-orange-100 to-red-100 rounded-xl sm:rounded-2xl flex items-center justify-center">
+              <Target className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-800">4.2</div>
+              <div className="text-sm sm:text-base text-gray-600">CGPA</div>
+              <div className="text-xs sm:text-sm text-gray-500">Current Semester</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
-        <h3 className="text-2xl font-bold text-gray-800 mb-6">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+        <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Quick Actions</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <button
             onClick={startQRScanner}
-            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 sm:p-6 rounded-xl sm:rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
           >
-            <div className="flex items-center gap-4">
-              <QrCode className="w-8 h-8" />
-              <div className="text-left">
-                <div className="text-lg">Mark Attendance</div>
-                <div className="text-sm opacity-90">Scan QR code to check in</div>
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+              <QrCode className="w-6 h-6 sm:w-8 sm:h-8" />
+              <div className="text-center sm:text-left">
+                <div className="text-base sm:text-lg">Mark Attendance</div>
+                <div className="text-xs sm:text-sm opacity-90">Scan QR code to check in</div>
               </div>
             </div>
           </button>
           
           <button 
             onClick={handleAddSampleData}
-            className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+            className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-4 sm:p-6 rounded-xl sm:rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
           >
-            <div className="flex items-center gap-4">
-              <Activity className="w-8 h-8" />
-              <div className="text-left">
-                <div className="text-lg">Add Test Data</div>
-                <div className="text-sm opacity-90">Load sample attendance</div>
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+              <Activity className="w-6 h-6 sm:w-8 sm:h-8" />
+              <div className="text-center sm:text-left">
+                <div className="text-base sm:text-lg">Add Test Data</div>
+                <div className="text-xs sm:text-sm opacity-90">Load sample attendance</div>
               </div>
             </div>
           </button>
 
           <button 
             onClick={() => setShowJoinClassroom(true)}
-            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 sm:p-6 rounded-xl sm:rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
           >
-            <div className="flex items-center gap-4">
-              <School className="w-8 h-8" />
-              <div className="text-left">
-                <div className="text-lg">Join Classroom</div>
-                <div className="text-sm opacity-90">Enter classroom code</div>
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+              <School className="w-6 h-6 sm:w-8 sm:h-8" />
+              <div className="text-center sm:text-left">
+                <div className="text-base sm:text-lg">Join Classroom</div>
+                <div className="text-xs sm:text-sm opacity-90">Enter classroom code</div>
               </div>
             </div>
           </button>
           
-          <button className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-6 rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-            <div className="flex items-center gap-4">
-              <BookOpen className="w-8 h-8" />
-              <div className="text-left">
-                <div className="text-lg">View Assignments</div>
-                <div className="text-sm opacity-90">Check pending work</div>
+          <button className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-4 sm:p-6 rounded-xl sm:rounded-2xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+              <BookOpen className="w-6 h-6 sm:w-8 sm:h-8" />
+              <div className="text-center sm:text-left">
+                <div className="text-base sm:text-lg">View Assignments</div>
+                <div className="text-xs sm:text-sm opacity-90">Check pending work</div>
               </div>
             </div>
           </button>
@@ -606,12 +606,12 @@ const StudentDashboard = ({ onLogout }) => {
       </div>
 
       {/* My Classrooms */}
-      <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-2xl font-bold text-gray-800">My Classrooms</h3>
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-800">My Classrooms</h3>
           <button 
             onClick={() => setShowJoinClassroom(true)}
-            className="text-green-600 font-semibold hover:text-green-800 transition-colors flex items-center gap-1"
+            className="text-green-600 font-semibold hover:text-green-800 transition-colors flex items-center gap-1 text-sm sm:text-base"
           >
             <Plus className="w-4 h-4" />
             Join New
@@ -888,38 +888,38 @@ const StudentDashboard = ({ onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 safe-area-top safe-area-bottom">
       {/* Header */}
-      <div className="bg-white/70 backdrop-blur-sm border-b border-white/50 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      <div className="bg-white/70 backdrop-blur-sm border-b border-white/50 sticky top-0 z-40 safe-area-top">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-blue-600" />
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <User className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">{studentData.name}</h1>
-                <p className="text-sm text-gray-600">{studentData.id} • {studentData.class}</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-800 truncate">{studentData.name}</h1>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">{studentData.id} • {studentData.class}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <button 
                 onClick={handleProfileView}
                 className="p-2 bg-white/70 rounded-xl border border-white/50 hover:bg-white/90 transition-all duration-300"
               >
-                <User className="w-5 h-5 text-gray-600" />
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
               </button>
               <button className="p-2 bg-white/70 rounded-xl border border-white/50 hover:bg-white/90 transition-all duration-300">
-                <Bell className="w-5 h-5 text-gray-600" />
+                <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
               </button>
-              <button className="p-2 bg-white/70 rounded-xl border border-white/50 hover:bg-white/90 transition-all duration-300">
+              <button className="hidden sm:block p-2 bg-white/70 rounded-xl border border-white/50 hover:bg-white/90 transition-all duration-300">
                 <Settings className="w-5 h-5 text-gray-600" />
               </button>
               <button 
                 onClick={handleLogout}
                 className="p-2 bg-red-100 rounded-xl border border-red-200 hover:bg-red-200 transition-all duration-300"
               >
-                <LogOut className="w-5 h-5 text-red-600" />
+                <LogOut className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </button>
             </div>
           </div>
@@ -927,7 +927,7 @@ const StudentDashboard = ({ onLogout }) => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 safe-area-bottom">
         {currentStep === 'profile' ? (
           <ProfilePage onBack={handleBackToHome} />
         ) : (
@@ -940,11 +940,11 @@ const StudentDashboard = ({ onLogout }) => {
 
       {/* Join Classroom Modal */}
       {showJoinClassroom && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Join Classroom</h2>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 safe-area-top safe-area-bottom">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl animate-slide-up">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Join Classroom</h2>
             <form onSubmit={handleJoinClassroom}>
-              <div className="mb-6">
+              <div className="mb-4 sm:mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Classroom Code
                 </label>
@@ -953,7 +953,7 @@ const StudentDashboard = ({ onLogout }) => {
                   value={classroomCode}
                   onChange={(e) => setClassroomCode(e.target.value.toUpperCase())}
                   placeholder="Enter 6-digit classroom code"
-                  className="w-full p-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full p-3 sm:p-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base"
                   maxLength={6}
                   required
                 />
@@ -962,21 +962,21 @@ const StudentDashboard = ({ onLogout }) => {
                 </p>
               </div>
               
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setShowJoinClassroom(false);
                     setClassroomCode('');
                   }}
-                  className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition-all"
+                  className="w-full sm:flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={joinLoading || !classroomCode.trim()}
-                  className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {joinLoading ? 'Joining...' : 'Join Classroom'}
                 </button>

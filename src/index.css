@@ -2,6 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile-first base styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  /* Prevent zoom on input focus on iOS */
+  -webkit-text-size-adjust: 100%;
+  /* Enable smooth scrolling */
+  scroll-behavior: smooth;
+}
+
+body {
+  /* Prevent horizontal scroll */
+  overflow-x: hidden;
+  /* Improve touch scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent text selection on mobile */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection for input fields and content areas */
+input, textarea, [contenteditable="true"], .selectable-text {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Touch-friendly button styles */
+button, .btn, .touch-target {
+  min-height: 44px; /* Apple's recommended minimum touch target */
+  min-width: 44px;
+  touch-action: manipulation; /* Disable double-tap zoom */
+  cursor: pointer;
+}
+
+/* Improve tap performance */
+.tap-highlight-none {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile-friendly focus styles */
+@media (max-width: 768px) {
+  *:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+  
+  /* Larger touch targets on mobile */
+  button, .btn, a[role="button"] {
+    min-height: 48px;
+    padding: 12px 16px;
+  }
+  
+  /* Better mobile form styling */
+  input, select, textarea {
+    min-height: 48px;
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 12px 16px;
+  }
+  
+  /* Mobile-optimized spacing */
+  .container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
 /* Custom animations for notifications */
 @keyframes slide-in-right {
   0% {
@@ -50,4 +122,166 @@
 
 .animate-bounce-in {
   animation: bounce-in 0.4s ease-out;
+}
+
+/* Mobile-specific animations */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-left {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-right {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out;
+}
+
+.animate-slide-left {
+  animation: slide-left 0.3s ease-out;
+}
+
+.animate-slide-right {
+  animation: slide-right 0.3s ease-out;
+}
+
+/* Mobile navigation helpers */
+.mobile-nav {
+  transition: transform 0.3s ease-in-out;
+}
+
+.mobile-nav-open {
+  transform: translateX(0);
+}
+
+.mobile-nav-closed {
+  transform: translateX(-100%);
+}
+
+/* Mobile modal improvements */
+.mobile-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+}
+
+.mobile-modal-content {
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: 5vh auto;
+}
+
+/* Mobile table improvements */
+.mobile-table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-table tbody,
+.mobile-table thead,
+.mobile-table tr {
+  display: block;
+}
+
+.mobile-table td,
+.mobile-table th {
+  display: block;
+  border: none;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.mobile-table td::before {
+  content: attr(data-label) ": ";
+  font-weight: bold;
+  color: #6b7280;
+}
+
+/* Hide scrollbars on mobile while keeping functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile-friendly card layouts */
+.mobile-card {
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+/* Touch-friendly spacing */
+.mobile-spacing > * + * {
+  margin-top: 16px;
+}
+
+.mobile-spacing-sm > * + * {
+  margin-top: 8px;
+}
+
+.mobile-spacing-lg > * + * {
+  margin-top: 24px;
+}
+
+/* Safe area handling for devices with notches */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right);
 }

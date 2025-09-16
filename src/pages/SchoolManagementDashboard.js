@@ -10,7 +10,9 @@ import {
   Settings, 
   LogOut, 
   ClipboardCheck,
-  Upload
+  Upload,
+  Menu,
+  X
 } from 'lucide-react';
 import { logoutUser } from '../firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,6 +35,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [detailView, setDetailView] = useState(null); // 'students', 'teachers', 'parents', or null
   const [showChildRequestsModal, setShowChildRequestsModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   // Custom hooks for data management
@@ -122,6 +125,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
   const handleSidebarClick = (itemId) => {
     if (itemId === 'requests') {
       setShowChildRequestsModal(true);
+      setSidebarOpen(false); // Close mobile sidebar
       return;
     }
     
@@ -132,6 +136,9 @@ const SchoolManagementDashboard = ({ onLogout }) => {
       setActiveTab(itemId);
       setDetailView(null);
     }
+    
+    // Close mobile sidebar after selection
+    setSidebarOpen(false);
   };
 
   if (dashboardLoading) {
@@ -146,7 +153,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex relative">
       {/* Hidden file input for bulk upload */}
       <input
         type="file"
@@ -156,28 +163,50 @@ const SchoolManagementDashboard = ({ onLogout }) => {
         className="hidden"
       />
 
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
+      <div className={`
+        fixed lg:static inset-y-0 left-0 z-50 
+        w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        safe-area-left
+      `}>
         <div className="p-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <GraduationCap className="w-6 h-6 text-white" />
+          {/* Mobile close button */}
+          <div className="flex items-center justify-between lg:justify-start lg:space-x-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <GraduationCap className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">SchoolAdmin</h1>
+                <p className="text-sm text-gray-600">Management Portal</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">SchoolAdmin</h1>
-              <p className="text-sm text-gray-600">Management Portal</p>
-            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-600" />
+            </button>
           </div>
         </div>
 
-        <nav className="mt-6">
+        <nav className="mt-6 px-3">
           {sidebarItems.map((item) => (
             <button
               key={item.id}
               onClick={() => handleSidebarClick(item.id)}
-              className={`w-full flex items-center justify-between px-6 py-3 text-left transition-all duration-200 ${
+              className={`w-full flex items-center justify-between px-3 py-3 mb-1 text-left rounded-lg transition-all duration-200 ${
                 (activeTab === item.id || detailView === item.id)
-                  ? 'bg-blue-50 text-blue-600 border-r-3 border-blue-600'
+                  ? 'bg-blue-50 text-blue-600'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
@@ -186,7 +215,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                 <span className="font-medium">{item.label}</span>
               </div>
               {item.badge > 0 && (
-                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
                   {item.badge}
                 </span>
               )}
@@ -194,14 +223,14 @@ const SchoolManagementDashboard = ({ onLogout }) => {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 w-64 p-6 border-t border-gray-200">
+        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200 bg-white safe-area-bottom">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
               {userData?.name?.charAt(0)?.toUpperCase() || 'A'}
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">{userData?.name || 'Admin'}</p>
-              <p className="text-xs text-gray-600">{userData?.email}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">{userData?.name || 'Admin'}</p>
+              <p className="text-xs text-gray-600 truncate">{userData?.email}</p>
             </div>
           </div>
           <button
@@ -215,12 +244,40 @@ const SchoolManagementDashboard = ({ onLogout }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+      <div className="flex-1 overflow-auto lg:ml-0">
+        <div className="p-4 sm:p-6 lg:p-8 safe-area-top safe-area-right">
+          {/* Mobile Header with Hamburger */}
+          <div className="lg:hidden mb-6">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                <Menu className="w-6 h-6 text-gray-600" />
+              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowChildRequestsModal(true)}
+                  className="relative p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all duration-200"
+                >
+                  <Bell className="w-5 h-5 text-gray-600" />
+                  {pendingRequestsCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                      {pendingRequestsCount}
+                    </span>
+                  )}
+                </button>
+                <button className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all duration-200">
+                  <Settings className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
                 {detailView 
                   ? `${detailView.charAt(0).toUpperCase() + detailView.slice(1)} Management`
                   : activeTab === 'overview' 
@@ -228,14 +285,15 @@ const SchoolManagementDashboard = ({ onLogout }) => {
                     : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)
                 }
               </h2>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 mt-1 text-sm sm:text-base">
                 {detailView 
                   ? `Manage ${detailView} in your school`
                   : 'Welcome to your school management dashboard'
                 }
               </p>
             </div>
-            <div className="flex items-center space-x-4">
+            {/* Desktop Header Actions */}
+            <div className="hidden lg:flex items-center space-x-4">
               <button
                 onClick={() => setShowChildRequestsModal(true)}
                 className="relative p-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200"

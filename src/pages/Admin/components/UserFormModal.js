@@ -12,20 +12,20 @@ const FormField = ({
   options = null,
   rows = null
 }) => {
-  const baseClasses = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500";
+  const baseClasses = "w-full px-3 sm:px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base";
   
   if (type === 'select' && options) {
     return (
       <div className="relative">
         {Icon && (
-          <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
         )}
         <select
           name={name}
           value={value}
           onChange={onChange}
           required={required}
-          className={`${baseClasses} ${Icon ? 'pl-10' : ''}`}
+          className={`${baseClasses} ${Icon ? 'pl-9 sm:pl-10' : ''}`}
         >
           <option value="">{placeholder}</option>
           {options.map((option) => (
@@ -42,7 +42,7 @@ const FormField = ({
     return (
       <div className="relative">
         {Icon && (
-          <Icon className="absolute left-3 top-4 text-gray-400 w-5 h-5" />
+          <Icon className="absolute left-3 top-4 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
         )}
         <textarea
           name={name}
@@ -51,7 +51,7 @@ const FormField = ({
           onChange={onChange}
           required={required}
           rows={rows || 3}
-          className={`${baseClasses} ${Icon ? 'pl-10' : ''}`}
+          className={`${baseClasses} ${Icon ? 'pl-9 sm:pl-10' : ''}`}
         />
       </div>
     );
@@ -60,7 +60,7 @@ const FormField = ({
   return (
     <div className="relative">
       {Icon && (
-        <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
       )}
       <input
         type={type}
@@ -69,7 +69,7 @@ const FormField = ({
         value={value}
         onChange={onChange}
         required={required}
-        className={`${baseClasses} ${Icon ? 'pl-10' : ''}`}
+        className={`${baseClasses} ${Icon ? 'pl-9 sm:pl-10' : ''}`}
       />
     </div>
   );
@@ -175,24 +175,24 @@ const UserFormModal = ({
   const allFields = [...commonFields, ...getTypeSpecificFields()];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 safe-area-top safe-area-bottom">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">{getModalTitle()}</h2>
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+          <h2 className="text-lg sm:text-2xl font-bold text-gray-900">{getModalTitle()}</h2>
           <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all duration-200"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
         {/* Form */}
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {allFields.map((field, index) => (
-              <div key={field.name} className={field.name === 'address' ? 'md:col-span-2' : ''}>
+              <div key={field.name} className={field.name === 'address' ? 'sm:col-span-2' : ''}>
                 <FormField
                   {...field}
                   value={formData[field.name] || ''}
@@ -202,7 +202,7 @@ const UserFormModal = ({
             ))}
             
             {/* Address field - always full width */}
-            <div className="md:col-span-2">
+            <div className="sm:col-span-2">
               <FormField
                 type="textarea"
                 name="address"
@@ -216,17 +216,17 @@ const UserFormModal = ({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 mt-6">
             <button
               onClick={onClose}
-              className="flex-1 bg-gray-500 text-white py-3 rounded-xl font-semibold hover:bg-gray-600 transition-all duration-300"
+              className="w-full sm:flex-1 bg-gray-500 text-white py-3 rounded-xl font-semibold hover:bg-gray-600 transition-all duration-300"
             >
               Cancel
             </button>
             <button
               onClick={onSubmit}
               disabled={loading}
-              className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 disabled:opacity-50"
+              className="w-full sm:flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 disabled:opacity-50"
             >
               {loading ? 'Processing...' : (selectedUser ? 'Update' : 'Add')}
             </button>
