@@ -1,0 +1,17 @@
+{
+  "files": {
+    "main.css": "/Smart-Attendance/static/css/main.c5fc59fe.css",
+    "main.js": "/Smart-Attendance/static/js/main.7989feb0.js",
+    "static/js/451.518da0b1.chunk.js": "/Smart-Attendance/static/js/451.518da0b1.chunk.js",
+    "static/js/453.687f3dee.chunk.js": "/Smart-Attendance/static/js/453.687f3dee.chunk.js",
+    "index.html": "/Smart-Attendance/index.html",
+    "main.c5fc59fe.css.map": "/Smart-Attendance/static/css/main.c5fc59fe.css.map",
+    "main.7989feb0.js.map": "/Smart-Attendance/static/js/main.7989feb0.js.map",
+    "451.518da0b1.chunk.js.map": "/Smart-Attendance/static/js/451.518da0b1.chunk.js.map",
+    "453.687f3dee.chunk.js.map": "/Smart-Attendance/static/js/453.687f3dee.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.c5fc59fe.css",
+    "static/js/main.7989feb0.js"
+  ]
+}
