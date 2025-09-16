@@ -285,3 +285,119 @@ button, .btn, .touch-target {
 .safe-area-right {
   padding-right: env(safe-area-inset-right);
 }
+
+/* Accessibility improvements */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus styles for better keyboard navigation */
+*:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .btn-primary {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+  }
+  
+  .btn-secondary {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 2px solid #000000 !important;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .animate-slide-up,
+  .animate-slide-down,
+  .animate-fade-in,
+  .animate-spin {
+    animation: none !important;
+  }
+}
+
+/* Performance optimization - force hardware acceleration for animations */
+.animate-slide-up,
+.animate-slide-down,
+.animate-fade-in {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+/* Improve text readability */
+.text-readable {
+  line-height: 1.6;
+  letter-spacing: 0.025em;
+}
+
+/* Better link styles for accessibility */
+a:not(.btn):not(.no-underline) {
+  text-decoration: underline;
+  text-decoration-skip-ink: auto;
+}
+
+a:not(.btn):hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Skip link for screen readers */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: #000;
+  color: #fff;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 10000;
+  border-radius: 4px;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* Performance optimizations */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+}

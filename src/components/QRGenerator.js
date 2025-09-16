@@ -174,27 +174,27 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 safe-area-top safe-area-bottom">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden animate-slide-up">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                <QrCode className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-800">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800 truncate">
                   {subjectData ? `Generate QR - ${subjectData.name}` : 'Generate Attendance QR'}
                 </h2>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600 truncate">
                   {subjectData ? `Create QR code for ${subjectData.code} attendance` : 'Create QR code for class attendance'}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200 transition-colors"
+              className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200 transition-colors flex-shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -202,9 +202,9 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)]">
           {step === 'form' && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Subject Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -215,7 +215,7 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
                   name="subject"
                   value={formData.subject}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 >
                   <option value="">Select a subject</option>
                   {subjects.map((subject) => (

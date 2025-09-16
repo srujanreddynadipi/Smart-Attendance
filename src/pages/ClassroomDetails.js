@@ -191,63 +191,63 @@ const ClassroomDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 safe-area-top safe-area-bottom">
+      <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <button
             onClick={() => navigate('/teacher-dashboard')}
-            className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+            className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow text-sm sm:text-base min-h-10 touch-manipulation"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
+            <span>Back to Dashboard</span>
           </button>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-800">{classroom.name}</h1>
-            <p className="text-gray-600">{classroom.description || 'No description available'}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-3xl font-bold text-gray-800 truncate">{classroom.name}</h1>
+            <p className="text-sm sm:text-base text-gray-600">{classroom.description || 'No description available'}</p>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Left Column - Classroom Info */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
             {/* Classroom Code Card */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Classroom Code</h3>
+            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">Classroom Code</h3>
               <div className="flex items-center gap-3">
-                <div className="flex-1 bg-gray-50 rounded-lg p-3 font-mono text-lg font-bold text-center">
+                <div className="flex-1 bg-gray-50 rounded-lg p-3 font-mono text-base sm:text-lg font-bold text-center min-h-12">
                   {classroom.code || 'N/A'}
                 </div>
                 <button
                   onClick={copyClassroomCode}
-                  className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-12 min-w-12 flex items-center justify-center touch-manipulation"
                   disabled={!classroom.code}
                 >
                   {copiedCode ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-sm text-gray-500 mt-2">Share this code with students to join</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-2">Share this code with students to join</p>
             </div>
 
             {/* Classroom Info Card */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Information</h3>
+            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">Information</h3>
               <div className="space-y-4">
                 <div 
-                  className="flex items-center gap-3 cursor-pointer hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                  className="flex items-center gap-3 cursor-pointer hover:bg-blue-50 p-3 rounded-lg transition-colors touch-manipulation"
                   onClick={() => setShowStudentsList(true)}
                 >
-                  <Users className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <p className="font-medium">Students</p>
-                    <p className="text-sm text-gray-600">{classroom.studentCount || 0} enrolled</p>
+                  <Users className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm sm:text-base">Students</p>
+                    <p className="text-xs sm:text-sm text-gray-600">{classroom.studentCount || 0} enrolled</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-green-600" />
-                  <div>
+                  <Calendar className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium">Academic Year</p>
                     <p className="text-sm text-gray-600">{classroom.academicYear || 'N/A'}</p>
                   </div>

@@ -279,44 +279,44 @@ const ClassroomManagement = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4 sm:p-6 safe-area-top safe-area-bottom">
       {/* Header */}
-      <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50 mb-6">
-        <div className="flex items-center justify-between">
-          <div>
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
             <button 
               onClick={() => navigate('/teacher')}
-              className="text-blue-600 hover:text-blue-800 mb-2 flex items-center gap-2 transition-colors"
+              className="text-blue-600 hover:text-blue-800 mb-2 flex items-center gap-2 transition-colors text-sm sm:text-base touch-manipulation"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Dashboard
+              <span>Back to Dashboard</span>
             </button>
-            <h1 className="text-3xl font-bold text-gray-800">Classroom Management</h1>
-            <p className="text-gray-600">Create and manage your classrooms, subjects, and students</p>
+            <h1 className="text-xl sm:text-3xl font-bold text-gray-800 truncate">Classroom Management</h1>
+            <p className="text-sm sm:text-base text-gray-600">Create and manage your classrooms, subjects, and students</p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 sm:px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2 text-sm sm:text-base min-h-12 touch-manipulation w-full sm:w-auto justify-center"
           >
-            <Plus className="w-5 h-5" />
-            Create Classroom
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Create Classroom</span>
           </button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Search and Filter */}
-        <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
-          <div className="flex gap-4">
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
               <input
                 type="text"
                 placeholder="Search classrooms..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-9 sm:pl-10 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base min-h-12"
               />
             </div>
             <button className="px-6 py-3 bg-white/50 border border-gray-200 rounded-xl hover:bg-white/70 transition-colors flex items-center gap-2">

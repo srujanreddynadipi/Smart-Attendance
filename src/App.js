@@ -1,8 +1,11 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { logoutUser } from './firebase/auth';
+import { initializePerformanceOptimizations } from './utils/performanceUtils';
+import { ComponentLoader } from './utils/lazyComponents';
+import { SkipLink } from './components/AccessibilityComponents';
 import Login from './pages/Login';
 import RegisterPage from './pages/RegisterPage';
 import TeacherDashboard from './pages/TeacherDashboard';
@@ -16,6 +19,11 @@ import SchoolManagementDashboard from './pages/SchoolManagementDashboard';
 function AppContent() {
   const { currentUser, userData } = useAuth();
   const navigate = useNavigate();
+
+  // Initialize performance optimizations
+  useEffect(() => {
+    initializePerformanceOptimizations();
+  }, []);
 
   // Memoize these functions using useCallback
   const handleLogin = useCallback((user) => {
@@ -63,81 +71,96 @@ function AppContent() {
   };
 
   return (
-    <Routes>
-      <Route path="/workflow-test" element={<WorkflowTest />} />
-      
-      {/* Auth Routes */}
-      <Route path="/login" element={
-        <PublicRoute>
-          <Login
-            onLogin={handleLogin}
-            onNavigateToRegister={() => navigate('/register')}
-          />
-        </PublicRoute>
-      } />
-      
-      <Route path="/register" element={
-        <PublicRoute>
-          <RegisterPage
-            onRegister={handleRegister}
-            onNavigateToLogin={() => navigate('/login')}
-            initialUserType="student"
-          />
-        </PublicRoute>
-      } />
+    <>
+      <SkipLink />
+      <main id="main-content">
+        <Suspense fallback={<ComponentLoader text="Loading application..." />}>
+          <Routes>
+            <Route path="/workflow-test" element={<WorkflowTest />} />
+            
+            {/* Auth Routes */}
+            <Route path="/login" element={
+              <PublicRoute>
+                <Login
+                  onLogin={handleLogin}
+                  onNavigateToRegister={() => navigate('/register')}
+                />
+              </PublicRoute>
+            } />
+            
+            <Route path="/register" element={
+              <PublicRoute>
+                <RegisterPage
+                  onRegister={handleRegister}
+                  onNavigateToLogin={() => navigate('/login')}
+                  initialUserType="student"
+                />
+              </PublicRoute>
+            } />
 
-      {/* Protected Routes */}
-      <Route path="/teacher" element={
-        <ProtectedRoute requiredRole="teacher">
-          <TeacherDashboard onLogout={handleLogout} />
-        </ProtectedRoute>
-      } />
+            {/* Protected Routes */}
+            <Route path="/teacher" element={
+              <ProtectedRoute requiredRole="teacher">
+                <TeacherDashboard onLogout={handleLogout} />
+              </ProtectedRoute>
+            } />
 
-      <Route path="/teacher/classrooms" element={
-        <ProtectedRoute requiredRole="teacher">
-          <ClassroomManagement />
-        </ProtectedRoute>
-      } />
+            <Route path="/teacher/classrooms" element={
+              <ProtectedRoute requiredRole="teacher">
+                <Suspense fallback={<ComponentLoader text="Loading classrooms..." />}>
+                  <ClassroomManagement />
+                </Suspense>
+              </ProtectedRoute>
+            } />
 
-      <Route path="/teacher/classroom/:classroomId" element={
-        <ProtectedRoute requiredRole="teacher">
-          <ClassroomDetails />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/student" element={
-        <ProtectedRoute requiredRole="student">
-          <StudentDashboard onLogout={handleLogout} />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/parent" element={
-        <ProtectedRoute requiredRole="parent">
-          <ParentDashboard onLogout={handleLogout} />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/admin" element={
-        <ProtectedRoute requiredRole="admin">
-          <SchoolManagementDashboard onLogout={handleLogout} />
-        </ProtectedRoute>
-      } />
+            <Route path="/teacher/classroom/:classroomId" element={
+              <ProtectedRoute requiredRole="teacher">
+                <Suspense fallback={<ComponentLoader text="Loading classroom details..." />}>
+                  <ClassroomDetails />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/student" element={
+              <ProtectedRoute requiredRole="student">
+                <StudentDashboard onLogout={handleLogout} />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/parent" element={
+              <ProtectedRoute requiredRole="parent">
+                <Suspense fallback={<ComponentLoader text="Loading parent dashboard..." />}>
+                  <ParentDashboard onLogout={handleLogout} />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin" element={
+              <ProtectedRoute requiredRole="admin">
+                <Suspense fallback={<ComponentLoader text="Loading admin dashboard..." />}>
+                  <SchoolManagementDashboard onLogout={handleLogout} />
+                </Suspense>
+              </ProtectedRoute>
+            } />
 
-      {/* Root redirect */}
-      <Route path="/" element={
-        currentUser && userData ? (
-          userData.role === 'teacher' ? <Navigate to="/teacher" replace /> :
-          userData.role === 'student' ? <Navigate to="/student" replace /> :
-          userData.role === 'parent' ? <Navigate to="/parent" replace /> :
-          userData.role === 'admin' ? <Navigate to="/admin" replace /> :
-          <Navigate to="/login" replace />
-        ) : (
-          <Navigate to="/login" replace />
-        )
-      } />
+            {/* Root redirect */}
+            <Route path="/" element={
+              currentUser && userData ? (
+                userData.role === 'teacher' ? <Navigate to="/teacher" replace /> :
+                userData.role === 'student' ? <Navigate to="/student" replace /> :
+                userData.role === 'parent' ? <Navigate to="/parent" replace /> :
+                userData.role === 'admin' ? <Navigate to="/admin" replace /> :
+                <Navigate to="/login" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </main>
+    </>
   );
 }
 

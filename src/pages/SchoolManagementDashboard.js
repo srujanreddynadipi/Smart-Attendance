@@ -5,12 +5,10 @@ import {
   BookOpen, 
   BarChart2, 
   GraduationCap, 
-  UserCheck, 
   Bell, 
   Settings, 
   LogOut, 
   ClipboardCheck,
-  Upload,
   Menu,
   X
 } from 'lucide-react';
@@ -20,18 +18,22 @@ import { useNotifications } from '../contexts/NotificationContext';
 
 // Import Admin components
 import {
-  DashboardOverview,
   UserManagement,
   UserFormModal,
   ChildRequestsModal,
-  useDashboardData,
   useChildRequests,
   useUserManagement
 } from './Admin';
 
+// Import optimized components
+import { useDashboardDataOptimized } from './Admin/hooks/useDashboardDataOptimized';
+import DashboardOverviewOptimized from './Admin/components/DashboardOverviewOptimized';
+import { DashboardSkeleton } from '../components/SkeletonLoaders';
+import { PerformanceMonitor } from '../components/PerformanceMonitor';
+
 const SchoolManagementDashboard = ({ onLogout }) => {
   const { userData } = useAuth();
-  const { confirmDialog, showSuccess, showError } = useNotifications();
+  const { confirmDialog, showSuccess } = useNotifications();
   const [activeTab, setActiveTab] = useState('overview');
   const [detailView, setDetailView] = useState(null); // 'students', 'teachers', 'parents', or null
   const [showChildRequestsModal, setShowChildRequestsModal] = useState(false);
@@ -39,7 +41,14 @@ const SchoolManagementDashboard = ({ onLogout }) => {
   const fileInputRef = useRef(null);
 
   // Custom hooks for data management
-  const { users, analytics, dashboardLoading, loadDashboardData } = useDashboardData();
+  const { 
+    users, 
+    analytics, 
+    dashboardLoading, 
+    loadingStates, 
+    loadDashboardData, 
+    refreshData 
+  } = useDashboardDataOptimized();
   const { 
     childRequests, 
     pendingRequestsCount, 
@@ -62,18 +71,18 @@ const SchoolManagementDashboard = ({ onLogout }) => {
     handleDeleteUser,
     handleSubmitUser,
     handleInputChange,
-    handleResetPassword,
-    resetForm
+    handleResetPassword
+    // resetForm - currently unused
   } = useUserManagement(() => {
     loadDashboardData();
     loadChildRequests();
   });
 
-  // Navigation handlers
-  const handleViewDetails = (viewType) => {
-    setDetailView(viewType);
-    setActiveTab('management');
-  };
+  // Navigation handlers - currently commented out since not used in current view
+  // const handleViewDetails = (viewType) => {
+  //   setDetailView(viewType);
+  //   setActiveTab('management');
+  // };
 
   const handleBackToOverview = () => {
     setDetailView(null);
@@ -141,12 +150,30 @@ const SchoolManagementDashboard = ({ onLogout }) => {
     setSidebarOpen(false);
   };
 
-  if (dashboardLoading) {
+  if (dashboardLoading && !analytics.totalStudents) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+      <div className="min-h-screen bg-gray-50 flex">
+        {/* Sidebar Skeleton */}
+        <div className="w-64 bg-white shadow-lg">
+          <div className="p-6">
+            <div className="flex items-center space-x-3 animate-pulse">
+              <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
+              <div>
+                <div className="w-24 h-5 bg-gray-200 rounded mb-2"></div>
+                <div className="w-32 h-3 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          </div>
+          <div className="px-6 space-y-2">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="w-full h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Main Content Skeleton */}
+        <div className="flex-1 p-6">
+          <DashboardSkeleton />
         </div>
       </div>
     );
@@ -325,9 +352,10 @@ const SchoolManagementDashboard = ({ onLogout }) => {
               onBack={handleBackToOverview}
             />
           ) : activeTab === 'overview' ? (
-            <DashboardOverview 
+            <DashboardOverviewOptimized 
               analytics={analytics}
-              onViewDetails={handleViewDetails}
+              loadingStates={loadingStates}
+              onRefresh={refreshData}
             />
           ) : (
             <div className="text-center py-12 text-gray-500">
@@ -357,6 +385,9 @@ const SchoolManagementDashboard = ({ onLogout }) => {
         onReject={handleRejectChildRequest}
         loading={requestsLoading}
       />
+
+      {/* Performance Monitor (only in development) */}
+      <PerformanceMonitor enabled={process.env.NODE_ENV === 'development'} />
     </div>
   );
 };
