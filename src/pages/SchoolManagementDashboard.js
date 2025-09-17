@@ -69,6 +69,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
     handleAddUser,
     handleEditUser,
     handleDeleteUser,
+    handleDeactivateUser,
     handleSubmitUser,
     handleInputChange,
     handleResetPassword
@@ -346,6 +347,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
               onAdd={handleAddUser}
               onEdit={handleEditUser}
               onDelete={handleDeleteUser}
+              onDeactivate={handleDeactivateUser}
               onResetPassword={handleResetPassword}
               onApprove={handleApproveStudent}
               onBulkUpload={handleBulkUpload}

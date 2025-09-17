@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { registerUser, createStudent, createTeacher, createParent } from '../../../firebase/auth';
+import { registerUser, createStudent, createTeacher, createParent, deleteUser, deactivateUser } from '../../../firebase/auth';
 import { useNotifications } from '../../../contexts/NotificationContext';
 
 export const useUserManagement = (onDataUpdate) => {
@@ -102,16 +102,73 @@ export const useUserManagement = (onDataUpdate) => {
     });
   };
 
-  const handleDeleteUser = async (userId, type) => {
+  const handleDeleteUser = async (user, type) => {
     const confirmed = await confirmDialog(
       'Delete User',
-      `Are you sure you want to delete this ${type.slice(0, -1)}? This action cannot be undone.`
+      `Are you sure you want to delete this ${type.slice(0, -1)}? This action cannot be undone.`,
+      'Delete',
+      'Cancel',
+      'destructive'
     );
     
     if (confirmed) {
-      // Add delete logic here if needed
-      showSuccess(`${type.slice(0, -1)} deleted successfully`);
-      if (onDataUpdate) onDataUpdate();
+      try {
+        setLoading(true);
+        
+        // Call the delete function with user ID and email
+        const result = await deleteUser(user.id, type, user.email);
+        
+        if (result.success) {
+          let message = `${type.slice(0, -1)} deleted successfully`;
+          if (!result.completeDeletion) {
+            message += '. Note: Email cannot be reused until Firebase Auth account is manually deleted.';
+          }
+          showSuccess(message);
+          if (onDataUpdate) onDataUpdate();
+        } else {
+          showError(`Failed to delete ${type.slice(0, -1)}: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        showError(`Failed to delete ${type.slice(0, -1)}: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleDeactivateUser = async (user, type) => {
+    const confirmed = await confirmDialog(
+      'Deactivate User',
+      `Are you sure you want to deactivate this ${type.slice(0, -1)}? They will no longer be able to access the system.`,
+      'Deactivate',
+      'Cancel',
+      'warning'
+    );
+    
+    if (confirmed) {
+      try {
+        setLoading(true);
+        
+        // Call the deactivate function with user ID and email
+        const result = await deactivateUser(user.id, type, user.email);
+        
+        if (result.success) {
+          let message = `${type.slice(0, -1)} deactivated successfully`;
+          if (!result.completeDeactivation) {
+            message += '. Note: Firebase Auth account remains active.';
+          }
+          showSuccess(message);
+          if (onDataUpdate) onDataUpdate();
+        } else {
+          showError(`Failed to deactivate ${type.slice(0, -1)}: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Error deactivating user:', error);
+        showError(`Failed to deactivate ${type.slice(0, -1)}: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -143,7 +200,7 @@ export const useUserManagement = (onDataUpdate) => {
 
         const result = selectedUser 
           ? { success: true, message: 'Teacher updated successfully' } // Add update logic
-          : await createTeacher(teacherData);
+          : await createTeacher(formData.email, formData.password, teacherData);
 
         if (result.success) {
           showSuccess(result.message);
@@ -169,7 +226,7 @@ export const useUserManagement = (onDataUpdate) => {
 
         const result = selectedUser 
           ? { success: true, message: 'Student updated successfully' } // Add update logic
-          : await createStudent(studentData);
+          : await createStudent(formData.email, formData.password, studentData);
 
         if (result.success) {
           showSuccess(result.message);
@@ -196,7 +253,7 @@ export const useUserManagement = (onDataUpdate) => {
 
         const result = selectedUser 
           ? { success: true, message: 'Parent updated successfully' } // Add update logic
-          : await createParent(parentData);
+          : await createParent(formData.email, formData.password, parentData);
 
         if (result.success) {
           showSuccess(result.message);
@@ -245,6 +302,7 @@ export const useUserManagement = (onDataUpdate) => {
     handleAddUser,
     handleEditUser,
     handleDeleteUser,
+    handleDeactivateUser,
     handleSubmitUser,
     handleInputChange,
     handleResetPassword,

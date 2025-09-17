@@ -4,8 +4,9 @@ import {
   signOut,
   updateProfile 
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from './config';
+import { doc, setDoc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { auth, db, functions } from './config';
 
 // Helper function to check if Firebase is properly configured
 const isFirebaseConfigured = () => {
@@ -61,9 +62,25 @@ export const registerUser = async (email, password, userData) => {
     };
   } catch (error) {
     console.error('Registration error:', error);
+    
+    // Provide more helpful error messages
+    let errorMessage = error.message;
+    if (error.code === 'auth/email-already-in-use') {
+      errorMessage = `This email address is already registered. 
+      
+🔧 To reuse this email:
+1. Go to Firebase Console (Authentication > Users)
+2. Find and delete the user with this email
+3. Then try registering again
+4. Or use a different email address
+      
+⚠️ Note: Admin dashboard deletion only removes database records, not Firebase Auth accounts.`;
+    }
+    
     return {
       success: false,
-      error: error.message
+      error: errorMessage,
+      errorCode: error.code
     };
   }
 };
@@ -326,6 +343,96 @@ export const createParent = async (email, password, parentData) => {
     };
   } catch (error) {
     console.error('Error creating parent:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+// Delete a user (complete deletion including Firebase Auth)
+export const deleteUser = async (userId, userType, email = null) => {
+  try {
+    if (!isFirebaseConfigured()) {
+      throw new Error('Firebase is not properly configured');
+    }
+
+    // Try to use Cloud Function for complete deletion first
+    try {
+      const deleteUserCompletely = httpsCallable(functions, 'deleteUserCompletely');
+      const result = await deleteUserCompletely({
+        userId,
+        userType,
+        email
+      });
+      
+      return {
+        success: true,
+        message: result.data.message,
+        completeDeletion: true
+      };
+    } catch (functionsError) {
+      console.warn('Cloud Functions not available, falling back to Firestore-only deletion:', functionsError);
+      
+      // Fallback to Firestore-only deletion
+      const userDoc = doc(db, userType, userId);
+      await deleteDoc(userDoc);
+
+      return {
+        success: true,
+        message: `${userType} deleted from database (Firebase Auth account remains)`,
+        completeDeletion: false,
+        warning: 'Email address cannot be reused until Firebase Auth account is manually deleted'
+      };
+    }
+  } catch (error) {
+    console.error(`Error deleting ${userType}:`, error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+// Deactivate a user (complete deactivation including Firebase Auth)
+export const deactivateUser = async (userId, userType, email = null) => {
+  try {
+    if (!isFirebaseConfigured()) {
+      throw new Error('Firebase is not properly configured');
+    }
+
+    // Try to use Cloud Function for complete deactivation first
+    try {
+      const deactivateUserCompletely = httpsCallable(functions, 'deactivateUserCompletely');
+      const result = await deactivateUserCompletely({
+        userId,
+        userType,
+        email
+      });
+      
+      return {
+        success: true,
+        message: result.data.message,
+        completeDeactivation: true
+      };
+    } catch (functionsError) {
+      console.warn('Cloud Functions not available, falling back to Firestore-only deactivation:', functionsError);
+      
+      // Fallback to Firestore-only deactivation
+      const userDoc = doc(db, userType, userId);
+      await updateDoc(userDoc, {
+        isActive: false,
+        deactivatedAt: new Date().toISOString()
+      });
+
+      return {
+        success: true,
+        message: `${userType} deactivated in database (Firebase Auth account remains active)`,
+        completeDeactivation: false
+      };
+    }
+  } catch (error) {
+    console.error(`Error deactivating ${userType}:`, error);
     return {
       success: false,
       error: error.message

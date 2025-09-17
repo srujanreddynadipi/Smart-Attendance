@@ -11,6 +11,32 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 
+// Helper function to safely convert different date formats to Date object
+const safeToDate = (dateValue) => {
+  if (!dateValue) {
+    return new Date();
+  }
+  
+  if (typeof dateValue.toDate === 'function') {
+    // Firestore Timestamp
+    return dateValue.toDate();
+  } else if (dateValue instanceof Date) {
+    // Regular Date object
+    return dateValue;
+  } else if (typeof dateValue === 'string') {
+    // String date
+    return new Date(dateValue);
+  } else if (typeof dateValue === 'number') {
+    // Unix timestamp
+    return new Date(dateValue);
+  } else if (dateValue.seconds) {
+    // Firestore Timestamp-like object with seconds
+    return new Date(dateValue.seconds * 1000);
+  }
+  
+  return new Date(); // Fallback
+};
+
 // Cache for storing dashboard data
 const dashboardCache = {
   data: null,
@@ -173,7 +199,7 @@ export const getRecentActivitiesOptimized = async (pageSize = 10) => {
 
     const activities = recentUsersSnapshot.docs.map((doc, index) => {
       const userData = doc.data();
-      const createdAt = userData.createdAt?.toDate() || new Date();
+      const createdAt = safeToDate(userData.createdAt);
       const timeAgo = getTimeAgo(createdAt);
 
       return {

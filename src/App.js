@@ -15,6 +15,7 @@ import ClassroomManagement from './pages/ClassroomManagement';
 import ClassroomDetails from './pages/ClassroomDetails';
 import WorkflowTest from './pages/WorkflowTest';
 import SchoolManagementDashboard from './pages/SchoolManagementDashboard';
+import FaceDataDebugger from './components/FaceDataDebugger';
 
 function AppContent() {
   const { currentUser, userData } = useAuth();
@@ -77,6 +78,7 @@ function AppContent() {
         <Suspense fallback={<ComponentLoader text="Loading application..." />}>
           <Routes>
             <Route path="/workflow-test" element={<WorkflowTest />} />
+            <Route path="/face-debug" element={<FaceDataDebugger />} />
             
             {/* Auth Routes */}
             <Route path="/login" element={
