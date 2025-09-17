@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Search, Filter, UserPlus, Edit, Trash2, Key, Check, X, ChevronRight, MoreVertical } from 'lucide-react';
+import { Search, Filter, UserPlus, Edit, Trash2, Key, Check, X, ChevronRight, MoreVertical, UserX } from 'lucide-react';
 
 const UserTable = ({ 
   users, 
   type, 
   searchTerm, 
   onEdit, 
-  onDelete, 
+  onDelete,
+  onDeactivate,
   onResetPassword, 
   onApprove,
   filters = {}
@@ -68,10 +69,19 @@ const UserTable = ({
       >
         <Key className="w-4 h-4" />
       </button>
+      {user.isActive !== false && onDeactivate && (
+        <button
+          onClick={() => onDeactivate(user, type)}
+          className="p-2 text-yellow-600 hover:text-yellow-900 hover:bg-yellow-100 rounded-lg transition-all duration-200"
+          title="Deactivate User"
+        >
+          <UserX className="w-4 h-4" />
+        </button>
+      )}
       <button
-        onClick={() => onDelete(user.id, type)}
+        onClick={() => onDelete(user, type)}
         className="p-2 text-red-600 hover:text-red-900 hover:bg-red-100 rounded-lg transition-all duration-200"
-        title="Delete"
+        title="Permanently Delete"
       >
         <Trash2 className="w-4 h-4" />
       </button>
@@ -143,15 +153,27 @@ const UserTable = ({
                 <Key className="w-4 h-4" />
                 <span>Reset Password</span>
               </button>
+              {user.isActive !== false && onDeactivate && (
+                <button
+                  onClick={() => {
+                    onDeactivate(user, type);
+                    setActiveDropdown(null);
+                  }}
+                  className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50"
+                >
+                  <UserX className="w-4 h-4" />
+                  <span>Deactivate</span>
+                </button>
+              )}
               <button
                 onClick={() => {
-                  onDelete(user.id, type);
+                  onDelete(user, type);
                   setActiveDropdown(null);
                 }}
                 className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-700 hover:bg-red-50"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Delete</span>
+                <span>Permanently Delete</span>
               </button>
             </div>
           )}

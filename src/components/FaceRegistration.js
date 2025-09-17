@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { Camera, CheckCircle, AlertCircle, RefreshCw, User } from 'lucide-react';
-import faceRecognitionService from '../services/faceRecognitionService';
+import mediaPipeArcFaceService from '../services/mediaPipeArcFaceService';
 
 // Note: This component now ONLY captures face data and returns it to the parent.
 // It no longer attempts to persist to Firestore; the parent should do so after the user is created.
@@ -23,7 +23,7 @@ const FaceRegistration = ({ onFaceRegistered, onRegistrationComplete, onSkip }) 
   useEffect(() => {
     const initService = async () => {
       try {
-        await faceRecognitionService.initialize();
+        await mediaPipeArcFaceService.initialize();
       } catch (error) {
         setError('Failed to initialize face recognition: ' + error.message);
       }
@@ -38,7 +38,7 @@ const FaceRegistration = ({ onFaceRegistered, onRegistrationComplete, onSkip }) 
         const video = webcamRef.current.video;
         if (video && video.readyState === 4) {
           try {
-            const quality = await faceRecognitionService.validateImageQuality(video);
+            const quality = await mediaPipeArcFaceService.validateImageQuality(video);
             setFaceQuality(quality);
           } catch (error) {
             // Ignore errors during quality check
@@ -61,22 +61,26 @@ const FaceRegistration = ({ onFaceRegistered, onRegistrationComplete, onSkip }) 
 
   const processFaceRegistration = async (imageDataUrl) => {
     setError('');
+    setStep('processing');
 
     try {
+      // Initialize MediaPipe + ArcFace service
+      await mediaPipeArcFaceService.initialize();
+      
       // Create image element from data URL
       const img = new Image();
       img.onload = async () => {
         try {
-          // Register the face
-          const result = await faceRecognitionService.registerFace(img);
+          // Register the face using new MediaPipe + ArcFace service
+          const result = await mediaPipeArcFaceService.registerFace(img);
           
           if (result.success) {
-            // Emit the descriptor to parent for later persistence
+            // Emit the embedding to parent for later persistence
             setStep('success');
             setTimeout(() => {
               // Support both new and old callback prop names for compatibility
-              if (onFaceRegistered) onFaceRegistered(result.descriptor);
-              if (onRegistrationComplete) onRegistrationComplete(result.descriptor);
+              if (onFaceRegistered) onFaceRegistered(result.embedding);
+              if (onRegistrationComplete) onRegistrationComplete(result.embedding);
             }, 1200);
           } else {
             throw new Error(result.error || 'Face registration failed');
@@ -84,15 +88,12 @@ const FaceRegistration = ({ onFaceRegistered, onRegistrationComplete, onSkip }) 
         } catch (error) {
           setError(error.message);
           setStep('error');
-        } finally {
-          // no processing state toggle needed; step controls the UI
         }
       };
       img.src = imageDataUrl;
     } catch (error) {
       setError(error.message);
       setStep('error');
-      // no processing state toggle needed; step controls the UI
     }
   };
 

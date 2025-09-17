@@ -94,7 +94,8 @@ const UserManagement = ({
   users, 
   onAdd, 
   onEdit, 
-  onDelete, 
+  onDelete,
+  onDeactivate,
   onResetPassword, 
   onApprove, 
   onBulkUpload,
@@ -185,6 +186,7 @@ const UserManagement = ({
         searchTerm={searchTerm}
         onEdit={onEdit}
         onDelete={onDelete}
+        onDeactivate={onDeactivate}
         onResetPassword={onResetPassword}
         onApprove={onApprove}
         filters={{

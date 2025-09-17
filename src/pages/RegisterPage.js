@@ -38,39 +38,19 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
   const [success, setSuccess] = useState('');
 
   const [formData, setFormData] = useState({
-    // Personal Information
+    // Personal Information (Only essential fields for registration)
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     dateOfBirth: '',
     gender: '',
-    bloodGroup: '',
-    
-    // Address Information  
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: '',
-    
-    // Academic Information
-    studentId: '',
-    course: '',
-    semester: '',
-    batch: '',
-    previousEducation: '',
     
     // Account Information
     password: '',
     confirmPassword: '',
     
-    // Emergency Contact
-    emergencyName: '',
-    emergencyPhone: '',
-    emergencyRelation: '',
-    
-    // Additional
+    // Face Registration
     profileImage: null,
     faceData: null,
     agreeTerms: false
@@ -78,12 +58,9 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
 
   const steps = [
     { id: 1, title: 'Personal Info', icon: User, description: 'Basic personal details' },
-    { id: 2, title: 'Address', icon: Home, description: 'Contact information' },
-    { id: 3, title: 'Academic', icon: BookOpen, description: 'Educational details' },
-    { id: 4, title: 'Account', icon: Lock, description: 'Login credentials' },
-    { id: 5, title: 'Face Setup', icon: Scan, description: 'Register your face' },
-    { id: 6, title: 'Emergency', icon: Users, description: 'Emergency contact' },
-    { id: 7, title: 'Review', icon: CheckCircle, description: 'Final review' }
+    { id: 2, title: 'Account', icon: Lock, description: 'Login credentials' },
+    { id: 3, title: 'Face Setup', icon: Scan, description: 'Register your face' },
+    { id: 4, title: 'Review', icon: CheckCircle, description: 'Final review' }
   ];
 
   const handleInputChange = (e) => {
@@ -114,11 +91,6 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
         return formData.firstName && formData.lastName && formData.email && 
                formData.phone && formData.dateOfBirth && formData.gender;
       case 2:
-        return formData.address && formData.city && formData.state && 
-               formData.zipCode && formData.country;
-      case 3:
-        return formData.course && formData.semester && formData.batch;
-      case 4:
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const isEmailValid = emailRegex.test(formData.email);
@@ -131,11 +103,9 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
         
         return formData.password && formData.confirmPassword && 
                isEmailValid && isPasswordValid && passwordsMatch;
-      case 5:
+      case 3:
         return formData.faceData !== null; // Face registration required
-      case 6:
-        return formData.emergencyName && formData.emergencyPhone && formData.emergencyRelation;
-      case 7:
+      case 4:
         return formData.agreeTerms;
       default:
         return true;
@@ -144,7 +114,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
 
   const nextStep = () => {
     if (validateCurrentStep()) {
-      setCurrentStep(prev => Math.min(prev + 1, 7));
+      setCurrentStep(prev => Math.min(prev + 1, 4));
       setError(''); // Clear any previous errors
     } else {
       // Set specific error messages based on current step
@@ -153,12 +123,6 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
           setError('Please fill in all required personal information fields');
           break;
         case 2:
-          setError('Please complete all address fields');
-          break;
-        case 3:
-          setError('Please fill in required academic information');
-          break;
-        case 4:
           if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             setError('Please enter a valid email address');
           } else if (!formData.password || formData.password.length < 6) {
@@ -169,13 +133,10 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
             setError('Please complete all account information');
           }
           break;
-        case 5:
+        case 3:
           setError('Please capture your face for registration');
           break;
-        case 6:
-          setError('Please fill in emergency contact information');
-          break;
-        case 7:
+        case 4:
           setError('Please agree to the terms and conditions');
           break;
         default:
@@ -199,36 +160,19 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
     setSuccess('');
     
     try {
-      // Prepare user data for Firebase
+      // Prepare simplified user data for Firebase (only essential information)
       const userData = {
         name: `${formData.firstName} ${formData.lastName}`,
         email: formData.email,
         role: 'student', // Default to student for registration
-        studentId: formData.studentId || null,
         phone: formData.phone,
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
-        bloodGroup: formData.bloodGroup,
-        address: {
-          street: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zipCode: formData.zipCode,
-          country: formData.country
-        },
-        academic: {
-          course: formData.course,
-          semester: formData.semester,
-          batch: formData.batch,
-          previousEducation: formData.previousEducation
-        },
-        emergencyContact: {
-          name: formData.emergencyName,
-          phone: formData.emergencyPhone,
-          relation: formData.emergencyRelation
-        },
         // Include face data for attendance verification
-        faceData: formData.faceData || null
+        faceData: formData.faceData || null,
+        // Profile completion status
+        profileCompleted: false, // User can complete profile later
+        registrationDate: new Date().toISOString()
       };
 
       // Debug: Log the registration attempt
@@ -245,10 +189,12 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
         try {
           if (formData.faceData) {
             const faceStore = await storeFaceEncoding(result.user.uid, formData.faceData, {
-              studentId: userData.studentId || result.user.uid,
+              studentId: result.user.uid, // Use uid as studentId for now
               name: userData.name,
-              email: userData.email
-            });
+              email: userData.email,
+              confidence: 0.9, // High confidence for new registration
+              faceQuality: 0.8
+            }, true); // Pass true to indicate this is an embedding, not legacy descriptor
             if (!faceStore.success) {
               console.warn('Face encoding save failed:', faceStore.error);
             }
@@ -257,7 +203,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
           console.warn('Face encoding save threw an error:', e);
         }
 
-        setSuccess('Registration successful! Please sign in with your new account.');
+        setSuccess('Registration successful! You can complete your profile details later. Please sign in with your new account.');
         // Optionally call onRegister with the result
         if (onRegister) {
           onRegister(result.user);
@@ -267,7 +213,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
           if (onNavigateToLogin) {
             onNavigateToLogin();
           }
-        }, 2000);
+        }, 3000);
       } else {
         setError(result.error);
       }
@@ -401,190 +347,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
   );
 
   // Step 2: Address Information
-  const AddressStep = () => (
-    <div className="space-y-6">
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-teal-500 rounded-full mx-auto flex items-center justify-center mb-4">
-          <Home className="w-10 h-10 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800">Address Information</h2>
-        <p className="text-gray-600">Where can we reach you?</p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Street Address *</label>
-        <div className="relative">
-          <MapPin className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
-          <textarea
-            name="address"
-            value={formData.address}
-            onChange={handleInputChange}
-            rows={3}
-            className="w-full pl-10 pr-4 p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="123 Main Street, Apartment 4B"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
-          <input
-            type="text"
-            name="city"
-            value={formData.city}
-            onChange={handleInputChange}
-            className="w-full p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="New York"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">State/Province *</label>
-          <input
-            type="text"
-            name="state"
-            value={formData.state}
-            onChange={handleInputChange}
-            className="w-full p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="New York"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">ZIP/Postal Code *</label>
-          <input
-            type="text"
-            name="zipCode"
-            value={formData.zipCode}
-            onChange={handleInputChange}
-            className="w-full p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="10001"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
-          <select
-            name="country"
-            value={formData.country}
-            onChange={handleInputChange}
-            className="w-full p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select Country</option>
-            <option value="US">United States</option>
-            <option value="CA">Canada</option>
-            <option value="UK">United Kingdom</option>
-            <option value="AU">Australia</option>
-            <option value="IN">India</option>
-            <option value="DE">Germany</option>
-            <option value="FR">France</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Step 3: Academic Information
-  const AcademicStep = () => (
-    <div className="space-y-6">
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full mx-auto flex items-center justify-center mb-4">
-          <BookOpen className="w-10 h-10 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800">Academic Information</h2>
-        <p className="text-gray-600">Tell us about your studies</p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Student ID (if known)</label>
-        <input
-          type="text"
-          name="studentId"
-          value={formData.studentId}
-          onChange={handleInputChange}
-          className="w-full p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="ST2024001"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Course/Program *</label>
-        <select
-          name="course"
-          value={formData.course}
-          onChange={handleInputChange}
-          className="w-full p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Select Course</option>
-          <option value="computer-science">Computer Science</option>
-          <option value="information-technology">Information Technology</option>
-          <option value="business-administration">Business Administration</option>
-          <option value="engineering">Engineering</option>
-          <option value="mathematics">Mathematics</option>
-          <option value="physics">Physics</option>
-          <option value="chemistry">Chemistry</option>
-          <option value="biology">Biology</option>
-          <option value="english">English Literature</option>
-          <option value="psychology">Psychology</option>
-        </select>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Semester *</label>
-          <select
-            name="semester"
-            value={formData.semester}
-            onChange={handleInputChange}
-            className="w-full p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select Semester</option>
-            <option value="1">1st Semester</option>
-            <option value="2">2nd Semester</option>
-            <option value="3">3rd Semester</option>
-            <option value="4">4th Semester</option>
-            <option value="5">5th Semester</option>
-            <option value="6">6th Semester</option>
-            <option value="7">7th Semester</option>
-            <option value="8">8th Semester</option>
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Batch/Year *</label>
-          <select
-            name="batch"
-            value={formData.batch}
-            onChange={handleInputChange}
-            className="w-full p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select Batch</option>
-            <option value="2024">2024</option>
-            <option value="2023">2023</option>
-            <option value="2022">2022</option>
-            <option value="2021">2021</option>
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Previous Education</label>
-        <textarea
-          name="previousEducation"
-          value={formData.previousEducation}
-          onChange={handleInputChange}
-          rows={3}
-          className="w-full p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="High School Name, Board/University, Year of Graduation, Percentage/GPA"
-        />
-      </div>
-    </div>
-  );
-
-  // Step 4: Account Information
+  // Step 2: Account Information
   const AccountStep = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
@@ -728,68 +491,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
     </div>
   );
 
-  // Step 6: Emergency Contact
-  const EmergencyStep = () => (
-    <div className="space-y-6">
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-gradient-to-r from-teal-400 to-blue-500 rounded-full mx-auto flex items-center justify-center mb-4">
-          <Users className="w-10 h-10 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800">Emergency Contact</h2>
-        <p className="text-gray-600">Someone we can contact in case of emergency</p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-        <div className="relative">
-          <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            name="emergencyName"
-            value={formData.emergencyName}
-            onChange={handleInputChange}
-            className="w-full pl-10 pr-4 p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Jane Doe"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-        <div className="relative">
-          <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="tel"
-            name="emergencyPhone"
-            value={formData.emergencyPhone}
-            onChange={handleInputChange}
-            className="w-full pl-10 pr-4 p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="+1 (555) 987-6543"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Relationship *</label>
-        <select
-          name="emergencyRelation"
-          value={formData.emergencyRelation}
-          onChange={handleInputChange}
-          className="w-full p-3 bg-white/70 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Select Relationship</option>
-          <option value="parent">Parent</option>
-          <option value="guardian">Guardian</option>
-          <option value="sibling">Sibling</option>
-          <option value="spouse">Spouse</option>
-          <option value="relative">Relative</option>
-          <option value="friend">Friend</option>
-        </select>
-      </div>
-    </div>
-  );
-
-  // Step 6: Review
+  // Step 4: Review
   const ReviewStep = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
@@ -801,54 +503,21 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white/60 rounded-xl p-4 border border-white/50">
+        <div className="bg-white/60 rounded-xl p-4 border border-white/50 md:col-span-2">
           <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
             <User className="w-4 h-4" />
             Personal Information
           </h3>
-          <div className="space-y-1 text-sm text-gray-600">
-            <p><span className="font-medium">Name:</span> {formData.firstName} {formData.lastName}</p>
-            <p><span className="font-medium">Email:</span> {formData.email}</p>
-            <p><span className="font-medium">Phone:</span> {formData.phone}</p>
-            <p><span className="font-medium">DOB:</span> {formData.dateOfBirth}</p>
-            <p><span className="font-medium">Gender:</span> {formData.gender}</p>
-          </div>
-        </div>
-
-        <div className="bg-white/60 rounded-xl p-4 border border-white/50">
-          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-            <Home className="w-4 h-4" />
-            Address
-          </h3>
-          <div className="space-y-1 text-sm text-gray-600">
-            <p>{formData.address}</p>
-            <p>{formData.city}, {formData.state} {formData.zipCode}</p>
-            <p>{formData.country}</p>
-          </div>
-        </div>
-
-        <div className="bg-white/60 rounded-xl p-4 border border-white/50">
-          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-            <BookOpen className="w-4 h-4" />
-            Academic
-          </h3>
-          <div className="space-y-1 text-sm text-gray-600">
-            <p><span className="font-medium">Course:</span> {formData.course}</p>
-            <p><span className="font-medium">Semester:</span> {formData.semester}</p>
-            <p><span className="font-medium">Batch:</span> {formData.batch}</p>
-            {formData.studentId && <p><span className="font-medium">Student ID:</span> {formData.studentId}</p>}
-          </div>
-        </div>
-
-        <div className="bg-white/60 rounded-xl p-4 border border-white/50">
-          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Emergency Contact
-          </h3>
-          <div className="space-y-1 text-sm text-gray-600">
-            <p><span className="font-medium">Name:</span> {formData.emergencyName}</p>
-            <p><span className="font-medium">Phone:</span> {formData.emergencyPhone}</p>
-            <p><span className="font-medium">Relation:</span> {formData.emergencyRelation}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1 text-sm text-gray-600">
+              <p><span className="font-medium">Name:</span> {formData.firstName} {formData.lastName}</p>
+              <p><span className="font-medium">Email:</span> {formData.email}</p>
+              <p><span className="font-medium">Phone:</span> {formData.phone}</p>
+            </div>
+            <div className="space-y-1 text-sm text-gray-600">
+              <p><span className="font-medium">Date of Birth:</span> {formData.dateOfBirth}</p>
+              <p><span className="font-medium">Gender:</span> {formData.gender}</p>
+            </div>
           </div>
         </div>
 
@@ -868,6 +537,16 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
               <span className="font-medium">Face registration is required for attendance verification</span>
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-blue-700">
+            <p className="font-medium">Complete Your Profile Later</p>
+            <p className="mt-1">After registration, you can add additional information like address, academic details, and emergency contacts in your profile settings.</p>
+          </div>
         </div>
       </div>
 
@@ -895,12 +574,9 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
   const renderCurrentStep = () => {
     switch(currentStep) {
       case 1: return PersonalInfoStep();
-      case 2: return AddressStep();
-      case 3: return AcademicStep();
-      case 4: return AccountStep();
-      case 5: return FaceRegistrationStep();
-      case 6: return EmergencyStep();
-      case 7: return ReviewStep();
+      case 2: return AccountStep();
+      case 3: return FaceRegistrationStep();
+      case 4: return ReviewStep();
       default: return PersonalInfoStep();
     }
   };
@@ -1013,7 +689,7 @@ const RegisterPage = ({ onRegister, onNavigateToLogin, initialUserType }) => {
                 Previous
               </button>
 
-              {currentStep < 7 ? (
+              {currentStep < 4 ? (
                 <button
                   type="button"
                   onClick={nextStep}

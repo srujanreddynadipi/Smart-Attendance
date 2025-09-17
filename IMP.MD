@@ -1,0 +1,1 @@
+LINK TO DELETE THE email in the firebase auth = https://console.firebase.google.com/project/attendance-d7971/authentication/users

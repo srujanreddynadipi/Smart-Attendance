@@ -11,27 +11,40 @@ import {
   addDoc 
 } from 'firebase/firestore';
 import { db } from './config';
+import faceEmbeddingDatabase from './faceEmbeddingDatabase';
 
-// Store face encoding for a user
-export const storeFaceEncoding = async (userId, faceDescriptor, userData = {}) => {
+// Unified face storage - works with both old face-api.js and new MediaPipe+ArcFace
+export const storeFaceEncoding = async (userId, faceDescriptor, userData = {}, isEmbedding = false) => {
   try {
     console.log('💾 Storing face encoding for user:', userId);
     
-    const faceData = {
-      userId,
-      descriptor: faceDescriptor, // Array of numbers representing face encoding
-      registeredAt: new Date(),
-      studentId: userData.studentId || userId,
-      name: userData.name || 'Unknown Student',
-      email: userData.email || '',
-      ...userData
-    };
+    if (isEmbedding) {
+      // Use new embedding database for MediaPipe+ArcFace
+      return await faceEmbeddingDatabase.storeFaceEmbedding(userId, {
+        embedding: faceDescriptor,
+        embeddingSize: faceDescriptor.length,
+        confidence: userData.confidence || 0.8,
+        faceQuality: userData.faceQuality || 0.8
+      });
+    } else {
+      // Legacy support for face-api.js descriptors
+      const faceData = {
+        userId,
+        descriptor: faceDescriptor, // Array of numbers representing face encoding
+        registeredAt: new Date(),
+        studentId: userData.studentId || userId,
+        name: userData.name || 'Unknown Student',
+        email: userData.email || '',
+        isLegacy: true, // Mark as legacy face-api.js data
+        ...userData
+      };
 
-    // Store in faces collection
-    await setDoc(doc(db, 'faceEncodings', userId), faceData);
-    
-    console.log('✅ Face encoding stored successfully');
-    return { success: true, message: 'Face registered successfully' };
+      // Store in faces collection
+      await setDoc(doc(db, 'faceEncodings', userId), faceData);
+      
+      console.log('✅ Face encoding stored successfully (legacy)');
+      return { success: true, message: 'Face registered successfully' };
+    }
     
   } catch (error) {
     console.error('❌ Error storing face encoding:', error);
@@ -39,14 +52,37 @@ export const storeFaceEncoding = async (userId, faceDescriptor, userData = {}) =
   }
 };
 
-// Get face encoding for a user
+// Get face encoding for a user (supports both old and new formats)
 export const getFaceEncoding = async (userId) => {
   try {
+    // First try to get from new embedding database
+    const newEmbedding = await faceEmbeddingDatabase.getFaceEmbedding(userId);
+    if (newEmbedding.success) {
+      return { 
+        success: true, 
+        data: { 
+          descriptor: newEmbedding.embedding,
+          studentId: userId,
+          isEmbedding: true,
+          confidence: newEmbedding.confidence,
+          registrationDate: newEmbedding.registrationDate
+        } 
+      };
+    }
+    
+    // Fallback to legacy face encodings
     const docRef = doc(db, 'faceEncodings', userId);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      return { success: true, data: docSnap.data() };
+      const data = docSnap.data();
+      return { 
+        success: true, 
+        data: {
+          ...data,
+          isEmbedding: false // Mark as legacy
+        }
+      };
     } else {
       return { success: false, error: 'Face encoding not found' };
     }
