@@ -2,17 +2,77 @@ rules_version='2'
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2025, 10, 13);
+    
+    // Users collection - users can read/write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Classrooms collection
+    match /classrooms/{classroomId} {
+      // Teachers can read/write classrooms they own
+      allow read, write: if request.auth != null && 
+        resource.data.teacherId == request.auth.uid;
+      
+      // Students can read classrooms they're enrolled in
+      allow read: if request.auth != null && 
+        request.auth.uid in resource.data.students;
+        
+      // Assessments subcollection
+      match /assessments/{assessmentId} {
+        // Teachers can manage assessments in their classrooms
+        allow read, write: if request.auth != null && 
+          get(/databases/$(database)/documents/classrooms/$(classroomId)).data.teacherId == request.auth.uid;
+        
+        // Students can read published assessments only
+        allow read: if request.auth != null && 
+          request.auth.uid in get(/databases/$(database)/documents/classrooms/$(classroomId)).data.students &&
+          resource.data.isPublished == true;
+          
+        // Marks subcollection
+        match /marks/{studentId} {
+          // Teachers can manage all marks in their classrooms
+          allow read, write: if request.auth != null && 
+            get(/databases/$(database)/documents/classrooms/$(classroomId)).data.teacherId == request.auth.uid;
+          
+          // Students can only read their own marks for published assessments
+          allow read: if request.auth != null && 
+            request.auth.uid == studentId &&
+            get(/databases/$(database)/documents/classrooms/$(classroomId)/assessments/$(assessmentId)).data.isPublished == true;
+        }
+      }
+      
+      // Configuration subcollection (grade weights)
+      match /configuration/{configId} {
+        // Only teachers can manage configuration
+        allow read, write: if request.auth != null && 
+          get(/databases/$(database)/documents/classrooms/$(classroomId)).data.teacherId == request.auth.uid;
+      }
+    }
+    
+    // Attendance sessions
+    match /attendanceSessions/{sessionId} {
+      // Teachers can manage their own sessions
+      allow read, write: if request.auth != null && 
+        resource.data.teacherId == request.auth.uid;
+        
+      // Students can read active sessions for attendance marking
+      allow read: if request.auth != null && 
+        resource.data.isActive == true;
+    }
+    
+    // Attendance records
+    match /attendanceRecords/{recordId} {
+      // Teachers can read records for their sessions
+      allow read: if request.auth != null && 
+        get(/databases/$(database)/documents/attendanceSessions/$(resource.data.sessionId)).data.teacherId == request.auth.uid;
+        
+      // Students can read their own records
+      allow read: if request.auth != null && 
+        resource.data.studentId == request.auth.uid;
+        
+      // Allow creation during attendance marking (handled by Cloud Functions)
+      allow create: if request.auth != null;
     }
   }
 }

@@ -1,104 +1,110 @@
-import React, { useState, useRef, useEffect } from 'react';
-import QRCode from 'qrcode';
-import { 
-  QrCode, 
-  MapPin, 
-  BookOpen, 
-  Clock, 
-  Users, 
-  Download, 
-  Copy, 
-  Check, 
+import React, { useState, useRef, useEffect } from "react";
+import QRCode from "qrcode";
+import {
+  QrCode,
+  MapPin,
+  BookOpen,
+  Clock,
+  Users,
+  Download,
+  Copy,
+  Check,
   X,
   Eye,
-  EyeOff
-} from 'lucide-react';
-import { createAttendanceSession, getTeacherSessions, endAttendanceSession } from '../firebase/attendance';
-import { useAuth } from '../contexts/AuthContext';
+  EyeOff,
+} from "lucide-react";
+import {
+  createAttendanceSession,
+  getTeacherSessions,
+  endAttendanceSession,
+} from "../firebase/attendance";
+import { useAuth } from "../contexts/AuthContext";
 
 const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
   const { userData } = useAuth();
-  const [step, setStep] = useState('form'); // form, generating, generated, error
+  const [step, setStep] = useState("form"); // form, generating, generated, error
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [qrCodeURL, setQrCodeURL] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [qrCodeURL, setQrCodeURL] = useState("");
   const [sessionData, setSessionData] = useState(null);
   const [copied, setCopied] = useState(false);
   const canvasRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    subject: subjectData?.name || '',
-    subjectCode: subjectData?.code || '',
-    classroomId: classroomId || '',
-    latitude: '',
-    longitude: '',
-    address: '',
-    duration: '180' // 3 hours default
+    subject: subjectData?.name || "",
+    subjectCode: subjectData?.code || "",
+    classroomId: classroomId || "",
+    latitude: "",
+    longitude: "",
+    address: "",
+    duration: "180", // 3 hours default
+    isGeofenced: false,
+    geofenceRadius: 50, // meters
   });
 
   // Get current location
   const getCurrentLocation = () => {
     setLoading(true);
-    setError('');
-    
+    setError("");
+
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported by this browser');
+      setError("Geolocation is not supported by this browser");
       setLoading(false);
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           latitude: position.coords.latitude.toFixed(6),
-          longitude: position.coords.longitude.toFixed(6)
+          longitude: position.coords.longitude.toFixed(6),
         }));
         setLoading(false);
-        setSuccess('Location obtained successfully!');
-        setTimeout(() => setSuccess(''), 3000);
+        setSuccess("Location obtained successfully!");
+        setTimeout(() => setSuccess(""), 3000);
       },
       (error) => {
-        setError('Unable to get location: ' + error.message);
+        setError("Unable to get location: " + error.message);
         setLoading(false);
       },
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 0
+        maximumAge: 0,
       }
     );
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const generateQRCode = async () => {
     if (!formData.subject || !formData.latitude || !formData.longitude) {
-      setError('Please fill in all required fields');
+      setError("Please fill in all required fields");
       return;
     }
 
     // Check if userData and uid are available
     if (!userData) {
-      setError('User data not available. Please log in again.');
+      setError("User data not available. Please log in again.");
       return;
     }
 
     if (!userData.uid) {
-      setError('User ID not available. Please log in again.');
+      setError("User ID not available. Please log in again.");
       return;
     }
 
     setLoading(true);
-    setError('');
-    setStep('generating');
+    setError("");
+    setStep("generating");
 
     try {
       // Create attendance session in Firebase
@@ -106,7 +112,11 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
         subject: formData.subject,
         latitude: formData.latitude,
         longitude: formData.longitude,
-        address: formData.address
+        address: formData.address,
+        isGeofenced: formData.isGeofenced,
+        geofenceRadius: formData.isGeofenced
+          ? parseInt(formData.geofenceRadius)
+          : null,
       });
 
       if (result.success) {
@@ -115,8 +125,8 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
           width: 300,
           margin: 2,
           color: {
-            dark: '#000000',
-            light: '#ffffff',
+            dark: "#000000",
+            light: "#ffffff",
           },
         };
 
@@ -128,26 +138,28 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
           location: {
             latitude: formData.latitude,
             longitude: formData.longitude,
-            address: formData.address
-          }
+            address: formData.address,
+          },
         });
-        setStep('generated');
+        setStep("generated");
       } else {
-        setError(result.error || 'Failed to create attendance session');
-        setStep('form');
+        setError(result.error || "Failed to create attendance session");
+        setStep("form");
       }
     } catch (error) {
-      console.error('Error generating QR code:', error);
-      setError('Failed to generate QR code');
-      setStep('form');
+      console.error("Error generating QR code:", error);
+      setError("Failed to generate QR code");
+      setStep("form");
     }
 
     setLoading(false);
   };
 
   const downloadQRCode = () => {
-    const link = document.createElement('a');
-    link.download = `attendance-qr-${formData.subject}-${new Date().toISOString().split('T')[0]}.png`;
+    const link = document.createElement("a");
+    link.download = `attendance-qr-${formData.subject}-${
+      new Date().toISOString().split("T")[0]
+    }.png`;
     link.href = qrCodeURL;
     link.click();
   };
@@ -161,16 +173,16 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
   };
 
   const subjects = [
-    'Mathematics',
-    'Physics',
-    'Chemistry',
-    'Biology',
-    'Computer Science',
-    'English',
-    'History',
-    'Geography',
-    'Economics',
-    'Psychology'
+    "Mathematics",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "Computer Science",
+    "English",
+    "History",
+    "Geography",
+    "Economics",
+    "Psychology",
   ];
 
   return (
@@ -185,10 +197,14 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-800 truncate">
-                  {subjectData ? `Generate QR - ${subjectData.name}` : 'Generate Attendance QR'}
+                  {subjectData
+                    ? `Generate QR - ${subjectData.name}`
+                    : "Generate Attendance QR"}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 truncate">
-                  {subjectData ? `Create QR code for ${subjectData.code} attendance` : 'Create QR code for class attendance'}
+                  {subjectData
+                    ? `Create QR code for ${subjectData.code} attendance`
+                    : "Create QR code for class attendance"}
                 </p>
               </div>
             </div>
@@ -203,7 +219,7 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
 
         {/* Content */}
         <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)]">
-          {step === 'form' && (
+          {step === "form" && (
             <div className="space-y-4 sm:space-y-6">
               {/* Subject Selection */}
               <div>
@@ -219,7 +235,9 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
                 >
                   <option value="">Select a subject</option>
                   {subjects.map((subject) => (
-                    <option key={subject} value={subject}>{subject}</option>
+                    <option key={subject} value={subject}>
+                      {subject}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -236,13 +254,15 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
                     disabled={loading}
                     className="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors"
                   >
-                    {loading ? 'Getting...' : 'Get Current'}
+                    {loading ? "Getting..." : "Get Current"}
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Latitude</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Latitude
+                    </label>
                     <input
                       type="number"
                       name="latitude"
@@ -254,7 +274,9 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Longitude</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Longitude
+                    </label>
                     <input
                       type="number"
                       name="longitude"
@@ -268,7 +290,9 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
                 </div>
 
                 <div className="mt-3">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Address (Optional)</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Address (Optional)
+                  </label>
                   <input
                     type="text"
                     name="address"
@@ -278,6 +302,62 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
                     className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
+              </div>
+
+              {/* Geofencing Section */}
+              <div className="bg-purple-50 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    Enable Geofencing
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        isGeofenced: !prev.isGeofenced,
+                      }))
+                    }
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      formData.isGeofenced ? "bg-blue-600" : "bg-gray-200"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        formData.isGeofenced ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {formData.isGeofenced && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-purple-700 bg-purple-100 p-2 rounded-lg">
+                      When enabled, students must be within the specified radius
+                      of the session location to mark attendance.
+                    </p>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Radius (in meters)
+                      </label>
+                      <input
+                        type="number"
+                        name="geofenceRadius"
+                        value={formData.geofenceRadius}
+                        onChange={handleInputChange}
+                        min="10"
+                        max="1000"
+                        step="5"
+                        placeholder="e.g., 50"
+                        className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Recommended: 50-100 meters for classroom attendance
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Duration */}
@@ -316,32 +396,39 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
               {/* Generate Button */}
               <button
                 onClick={generateQRCode}
-                disabled={loading || !formData.subject || !formData.latitude || !formData.longitude}
+                disabled={
+                  loading ||
+                  !formData.subject ||
+                  !formData.latitude ||
+                  !formData.longitude
+                }
                 className="w-full py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
-                {loading ? 'Generating QR Code...' : 'Generate QR Code'}
+                {loading ? "Generating QR Code..." : "Generate QR Code"}
               </button>
             </div>
           )}
 
-          {step === 'generating' && (
+          {step === "generating" && (
             <div className="text-center py-12">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
                 <QrCode className="w-8 h-8 text-blue-600 animate-pulse" />
               </div>
-              <h3 className="text-lg font-medium text-gray-800 mb-2">Generating QR Code</h3>
+              <h3 className="text-lg font-medium text-gray-800 mb-2">
+                Generating QR Code
+              </h3>
               <p className="text-gray-600">Creating attendance session...</p>
             </div>
           )}
 
-          {step === 'generated' && sessionData && (
+          {step === "generated" && sessionData && (
             <div className="space-y-6">
               {/* QR Code Display */}
               <div className="text-center">
                 <div className="inline-block p-4 bg-white border-2 border-gray-200 rounded-2xl">
-                  <img 
-                    src={qrCodeURL} 
-                    alt="Attendance QR Code" 
+                  <img
+                    src={qrCodeURL}
+                    alt="Attendance QR Code"
                     className="w-64 h-64 mx-auto"
                   />
                 </div>
@@ -349,7 +436,9 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
 
               {/* Session Info */}
               <div className="bg-gray-50 rounded-xl p-4">
-                <h3 className="font-medium text-gray-800 mb-3">Session Information</h3>
+                <h3 className="font-medium text-gray-800 mb-3">
+                  Session Information
+                </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subject:</span>
@@ -357,16 +446,23 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Session ID:</span>
-                    <span className="font-mono text-xs">{sessionData.sessionId}</span>
+                    <span className="font-mono text-xs">
+                      {sessionData.sessionId}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Location:</span>
-                    <span className="text-xs">{sessionData.location.latitude}, {sessionData.location.longitude}</span>
+                    <span className="text-xs">
+                      {sessionData.location.latitude},{" "}
+                      {sessionData.location.longitude}
+                    </span>
                   </div>
                   {sessionData.location.address && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Address:</span>
-                      <span className="text-xs">{sessionData.location.address}</span>
+                      <span className="text-xs">
+                        {sessionData.location.address}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -385,14 +481,20 @@ const QRGenerator = ({ onClose, classroomId = null, subjectData = null }) => {
                   onClick={copyQRData}
                   className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
                 >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'Copied!' : 'Copy Code'}
+                  {copied ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                  {copied ? "Copied!" : "Copy Code"}
                 </button>
               </div>
 
               {/* Instructions */}
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <h4 className="font-medium text-blue-800 mb-2">Instructions for Students:</h4>
+                <h4 className="font-medium text-blue-800 mb-2">
+                  Instructions for Students:
+                </h4>
                 <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
                   <li>Allow location access when prompted</li>
                   <li>Be within 50 meters of the class location</li>

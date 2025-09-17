@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  QrCode, 
-  MapPin, 
-  Users, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+import React, { useState, useEffect } from "react";
+import {
+  QrCode,
+  MapPin,
+  Users,
+  CheckCircle,
+  XCircle,
+  Clock,
   User,
   Shield,
   Calendar,
@@ -19,19 +19,20 @@ import {
   LogOut,
   Eye,
   StopCircle,
-  School
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { useNotifications } from '../contexts/NotificationContext';
-import { logoutUser } from '../firebase/auth';
-import QRGenerator from '../components/QRGenerator';
-import { 
-  getTeacherSessions, 
-  endAttendanceSession, 
-  getSessionAttendance 
-} from '../firebase/attendance';
-import { getTeacherClassrooms } from '../firebase/classrooms';
+  School,
+  BookOpen,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { useNotifications } from "../contexts/NotificationContext";
+import { logoutUser } from "../firebase/auth";
+import QRGenerator from "../components/QRGenerator";
+import {
+  getTeacherSessions,
+  endAttendanceSession,
+  getSessionAttendance,
+} from "../firebase/attendance";
+import { getTeacherClassrooms } from "../firebase/classrooms";
 
 const TeacherDashboard = ({ onLogout }) => {
   const { userData } = useAuth();
@@ -43,19 +44,19 @@ const TeacherDashboard = ({ onLogout }) => {
   const [sessionAttendance, setSessionAttendance] = useState([]);
   const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
 
   // Helper functions for date/time formatting
   const formatDate = (timestamp) => {
-    if (!timestamp) return 'N/A';
+    if (!timestamp) return "N/A";
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleDateString();
   };
 
   const formatTime = (timestamp) => {
-    if (!timestamp) return 'N/A';
+    if (!timestamp) return "N/A";
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleTimeString();
   };
@@ -63,8 +64,12 @@ const TeacherDashboard = ({ onLogout }) => {
   // Attendance statistics calculation
   const calculateAttendanceStats = () => {
     const total = sessionAttendance.length;
-    const present = sessionAttendance.filter(record => record.status === 'present' || !record.status).length;
-    const late = sessionAttendance.filter(record => record.status === 'late').length;
+    const present = sessionAttendance.filter(
+      (record) => record.status === "present" || !record.status
+    ).length;
+    const late = sessionAttendance.filter(
+      (record) => record.status === "late"
+    ).length;
     const absent = total - present - late;
 
     return { total, present, late, absent };
@@ -77,7 +82,7 @@ const TeacherDashboard = ({ onLogout }) => {
     if (userData?.uid) {
       loadActiveSessions();
       loadClassrooms();
-      
+
       // Auto-refresh sessions every 30 seconds
       const interval = setInterval(loadActiveSessions, 30000);
       return () => clearInterval(interval);
@@ -89,12 +94,12 @@ const TeacherDashboard = ({ onLogout }) => {
     if (selectedSession?.sessionId) {
       // Initial load
       loadSessionAttendance(selectedSession.sessionId);
-      
+
       // Auto-refresh attendance every 10 seconds for selected session
       const attendanceInterval = setInterval(() => {
         loadSessionAttendance(selectedSession.sessionId);
       }, 10000);
-      
+
       return () => clearInterval(attendanceInterval);
     }
   }, [selectedSession]);
@@ -109,40 +114,40 @@ const TeacherDashboard = ({ onLogout }) => {
         setError(result.error);
       }
     } catch (error) {
-      setError('Failed to load sessions');
+      setError("Failed to load sessions");
     }
     setLoading(false);
   };
 
   const loadClassrooms = async () => {
     try {
-      console.log('Loading classrooms for teacher dashboard');
+      console.log("Loading classrooms for teacher dashboard");
       const result = await getTeacherClassrooms(userData.uid);
       if (result.success) {
         setClassrooms(result.classrooms);
-        console.log('Classrooms loaded:', result.classrooms);
+        console.log("Classrooms loaded:", result.classrooms);
       } else {
-        console.error('Failed to load classrooms:', result.error);
+        console.error("Failed to load classrooms:", result.error);
       }
     } catch (error) {
-      console.error('Error loading classrooms:', error);
+      console.error("Error loading classrooms:", error);
     }
   };
 
   const loadSessionAttendance = async (sessionId) => {
     try {
-      console.log('🔄 Loading attendance for session:', sessionId);
+      console.log("🔄 Loading attendance for session:", sessionId);
       const result = await getSessionAttendance(sessionId);
       if (result.success) {
-        console.log('✅ Loaded attendance records:', result.records);
+        console.log("✅ Loaded attendance records:", result.records);
         setSessionAttendance(result.records);
       } else {
-        console.error('❌ Failed to load attendance:', result.error);
+        console.error("❌ Failed to load attendance:", result.error);
         setError(result.error);
       }
     } catch (error) {
-      console.error('❌ Failed to load attendance:', error);
-      setError('Failed to load attendance data');
+      console.error("❌ Failed to load attendance:", error);
+      setError("Failed to load attendance data");
     }
   };
 
@@ -153,26 +158,26 @@ const TeacherDashboard = ({ onLogout }) => {
 
   const handleEndSession = async (sessionId) => {
     const confirmed = await confirmDialog(
-      'End Session',
-      'Are you sure you want to end this session? This action cannot be undone.'
+      "End Session",
+      "Are you sure you want to end this session? This action cannot be undone."
     );
-    
+
     if (confirmed) {
       try {
         const result = await endAttendanceSession(sessionId);
         if (result.success) {
-          showSuccess('Session ended successfully');
+          showSuccess("Session ended successfully");
           await loadActiveSessions();
           if (selectedSession?.sessionId === sessionId) {
             setSelectedSession(null);
             setSessionAttendance([]);
           }
         } else {
-          showError(result.error || 'Failed to end session');
+          showError(result.error || "Failed to end session");
         }
       } catch (error) {
-        console.error('Error ending session:', error);
-        showError('Failed to end session. Please try again.');
+        console.error("Error ending session:", error);
+        showError("Failed to end session. Please try again.");
       }
     }
   };
@@ -184,16 +189,19 @@ const TeacherDashboard = ({ onLogout }) => {
         onLogout();
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
   // Filter sessions and attendance based on search and filter
-  const filteredAttendance = sessionAttendance.filter(record => {
-    const matchesSearch = record.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         record.studentId?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || record.status === filterStatus || 
-                         (filterStatus === 'present' && !record.status);
+  const filteredAttendance = sessionAttendance.filter((record) => {
+    const matchesSearch =
+      record.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.studentId?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter =
+      filterStatus === "all" ||
+      record.status === filterStatus ||
+      (filterStatus === "present" && !record.status);
     return matchesSearch && matchesFilter;
   });
 
@@ -215,10 +223,14 @@ const TeacherDashboard = ({ onLogout }) => {
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800">
-                  Welcome, {userData?.firstName || 'Teacher'}!
+                  Welcome, {userData?.firstName || "Teacher"}!
                 </h1>
-                <p className="text-sm sm:text-base lg:text-lg text-gray-600 hidden sm:block">Manage your class attendance efficiently</p>
-                <p className="text-xs text-gray-600 sm:hidden">Attendance Management</p>
+                <p className="text-sm sm:text-base lg:text-lg text-gray-600 hidden sm:block">
+                  Manage your class attendance efficiently
+                </p>
+                <p className="text-xs text-gray-600 sm:hidden">
+                  Attendance Management
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -258,8 +270,12 @@ const TeacherDashboard = ({ onLogout }) => {
                   <Plus className="w-6 h-6 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800">Quick Actions</h3>
-                  <p className="text-sm text-gray-600">Create new attendance session</p>
+                  <h3 className="text-xl font-bold text-gray-800">
+                    Quick Actions
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Create new attendance session
+                  </p>
                 </div>
               </div>
 
@@ -274,12 +290,31 @@ const TeacherDashboard = ({ onLogout }) => {
               </button>
 
               <button
-                onClick={() => navigate('/teacher/classrooms')}
+                onClick={() => navigate("/teacher/classrooms")}
                 className="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white py-4 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300"
               >
                 <div className="flex items-center justify-center gap-2">
                   <School className="w-5 h-5" />
                   Manage Classrooms
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  // Navigate to first classroom's gradebook, or classrooms if no classroom available
+                  if (classrooms.length > 0) {
+                    navigate(
+                      `/teacher/classroom/${classrooms[0].id}?tab=gradebook`
+                    );
+                  } else {
+                    navigate("/teacher/classrooms");
+                  }
+                }}
+                className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <BookOpen className="w-5 h-5" />
+                  Gradebook
                 </div>
               </button>
             </div>
@@ -291,8 +326,12 @@ const TeacherDashboard = ({ onLogout }) => {
                   <Clock className="w-6 h-6 text-orange-600" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800">Active Sessions</h3>
-                  <p className="text-sm text-gray-600">{activeSessions.length} active sessions</p>
+                  <h3 className="text-xl font-bold text-gray-800">
+                    Active Sessions
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {activeSessions.length} active sessions
+                  </p>
                 </div>
               </div>
 
@@ -305,14 +344,21 @@ const TeacherDashboard = ({ onLogout }) => {
                 <div className="text-center py-8">
                   <QrCode className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600">No active sessions</p>
-                  <p className="text-sm text-gray-500">Create a QR code to start</p>
+                  <p className="text-sm text-gray-500">
+                    Create a QR code to start
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {activeSessions.map((session) => (
-                    <div key={session.id} className="bg-white/60 rounded-2xl p-4 border border-white/50 hover:shadow-lg transition-all duration-300">
+                    <div
+                      key={session.id}
+                      className="bg-white/60 rounded-2xl p-4 border border-white/50 hover:shadow-lg transition-all duration-300"
+                    >
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold text-gray-800">{session.subject}</h4>
+                        <h4 className="font-semibold text-gray-800">
+                          {session.subject}
+                        </h4>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleViewSession(session)}
@@ -341,7 +387,7 @@ const TeacherDashboard = ({ onLogout }) => {
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
                           <MapPin className="w-3 h-3" />
-                          {session.location?.address || 'Manual Location'}
+                          {session.location?.address || "Manual Location"}
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
                           <Users className="w-3 h-3" />
@@ -356,22 +402,32 @@ const TeacherDashboard = ({ onLogout }) => {
 
             {/* Attendance Stats */}
             <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Attendance Overview</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-4">
+                Attendance Overview
+              </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-green-100 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">{attendanceStats.present}</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {attendanceStats.present}
+                  </div>
                   <div className="text-sm text-green-700">Present</div>
                 </div>
                 <div className="bg-red-100 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-red-600">{attendanceStats.absent}</div>
+                  <div className="text-2xl font-bold text-red-600">
+                    {attendanceStats.absent}
+                  </div>
                   <div className="text-sm text-red-700">Absent</div>
                 </div>
                 <div className="bg-yellow-100 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-yellow-600">{attendanceStats.late}</div>
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {attendanceStats.late}
+                  </div>
                   <div className="text-sm text-yellow-700">Late</div>
                 </div>
                 <div className="bg-blue-100 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-blue-600">{attendanceStats.total}</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {attendanceStats.total}
+                  </div>
                   <div className="text-sm text-blue-700">Total</div>
                 </div>
               </div>
@@ -388,10 +444,14 @@ const TeacherDashboard = ({ onLogout }) => {
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-gray-800">
-                      {selectedSession ? `${selectedSession.subject} - Attendance` : 'Select a Session'}
+                      {selectedSession
+                        ? `${selectedSession.subject} - Attendance`
+                        : "Select a Session"}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {selectedSession ? 'Track student attendance status' : 'Choose a session to view details'}
+                      {selectedSession
+                        ? "Track student attendance status"
+                        : "Choose a session to view details"}
                     </p>
                   </div>
                 </div>
@@ -400,8 +460,10 @@ const TeacherDashboard = ({ onLogout }) => {
                     <button className="bg-blue-500 text-white p-2 rounded-xl hover:bg-blue-600 transition-all duration-300">
                       <Download className="w-5 h-5" />
                     </button>
-                    <button 
-                      onClick={() => loadSessionAttendance(selectedSession.sessionId)}
+                    <button
+                      onClick={() =>
+                        loadSessionAttendance(selectedSession.sessionId)
+                      }
                       className="bg-gray-200 text-gray-700 p-2 rounded-xl hover:bg-gray-300 transition-all duration-300"
                     >
                       <RefreshCw className="w-5 h-5" />
@@ -414,7 +476,9 @@ const TeacherDashboard = ({ onLogout }) => {
                 <div className="space-y-6">
                   {/* Session Info */}
                   <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-                    <h4 className="font-semibold text-blue-800 mb-2">{selectedSession.subject}</h4>
+                    <h4 className="font-semibold text-blue-800 mb-2">
+                      {selectedSession.subject}
+                    </h4>
                     <div className="grid grid-cols-2 gap-4 text-sm text-blue-700">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
@@ -430,7 +494,7 @@ const TeacherDashboard = ({ onLogout }) => {
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        Status: {selectedSession.isActive ? 'Active' : 'Ended'}
+                        Status: {selectedSession.isActive ? "Active" : "Ended"}
                       </div>
                     </div>
                   </div>
@@ -464,40 +528,67 @@ const TeacherDashboard = ({ onLogout }) => {
                     {filteredAttendance.length === 0 ? (
                       <div className="text-center py-8">
                         <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600">No attendance records found</p>
+                        <p className="text-gray-600">
+                          No attendance records found
+                        </p>
                         <p className="text-sm text-gray-500">
-                          {searchTerm || filterStatus !== 'all' ? 'Try adjusting your search or filter' : 'Students will appear here after scanning QR codes'}
+                          {searchTerm || filterStatus !== "all"
+                            ? "Try adjusting your search or filter"
+                            : "Students will appear here after scanning QR codes"}
                         </p>
                       </div>
                     ) : (
                       filteredAttendance.map((record) => (
-                        <div key={record.id} className="bg-white/60 rounded-2xl p-4 border border-white/50 hover:shadow-lg transition-all duration-300">
+                        <div
+                          key={record.id}
+                          className="bg-white/60 rounded-2xl p-4 border border-white/50 hover:shadow-lg transition-all duration-300"
+                        >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                               <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
                                 <User className="w-6 h-6 text-blue-600" />
                               </div>
                               <div>
-                                <h4 className="font-semibold text-gray-800">{record.studentName}</h4>
-                                <p className="text-sm text-gray-600">{record.studentId}</p>
+                                <h4 className="font-semibold text-gray-800">
+                                  {record.studentName}
+                                </h4>
+                                <p className="text-sm text-gray-600">
+                                  {record.studentId}
+                                </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-4">
                               <div className="text-right">
-                                <div className="text-sm font-semibold text-gray-700">{formatTime(record.markedAt)}</div>
-                                <div className="text-xs text-gray-500">Check-in Time</div>
+                                <div className="text-sm font-semibold text-gray-700">
+                                  {formatTime(record.markedAt)}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Check-in Time
+                                </div>
                               </div>
-                              <div className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 ${
-                                !record.status || record.status === 'present' 
-                                  ? 'bg-green-100 text-green-700' 
-                                  : record.status === 'late'
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : 'bg-red-100 text-red-700'
-                              }`}>
-                                {(!record.status || record.status === 'present') && <CheckCircle className="w-4 h-4" />}
-                                {record.status === 'absent' && <XCircle className="w-4 h-4" />}
-                                {record.status === 'late' && <Clock className="w-4 h-4" />}
-                                {(record.status || 'Present').charAt(0).toUpperCase() + (record.status || 'Present').slice(1)}
+                              <div
+                                className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 ${
+                                  !record.status || record.status === "present"
+                                    ? "bg-green-100 text-green-700"
+                                    : record.status === "late"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-red-100 text-red-700"
+                                }`}
+                              >
+                                {(!record.status ||
+                                  record.status === "present") && (
+                                  <CheckCircle className="w-4 h-4" />
+                                )}
+                                {record.status === "absent" && (
+                                  <XCircle className="w-4 h-4" />
+                                )}
+                                {record.status === "late" && (
+                                  <Clock className="w-4 h-4" />
+                                )}
+                                {(record.status || "Present")
+                                  .charAt(0)
+                                  .toUpperCase() +
+                                  (record.status || "Present").slice(1)}
                               </div>
                             </div>
                           </div>
@@ -509,8 +600,13 @@ const TeacherDashboard = ({ onLogout }) => {
               ) : (
                 <div className="text-center py-16">
                   <Users className="w-20 h-20 text-gray-300 mx-auto mb-6" />
-                  <h4 className="text-xl font-semibold text-gray-600 mb-2">No Session Selected</h4>
-                  <p className="text-gray-500 mb-6">Select an active session from the left panel to view attendance details</p>
+                  <h4 className="text-xl font-semibold text-gray-600 mb-2">
+                    No Session Selected
+                  </h4>
+                  <p className="text-gray-500 mb-6">
+                    Select an active session from the left panel to view
+                    attendance details
+                  </p>
                   <button
                     onClick={() => setShowQRGenerator(true)}
                     className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300"
@@ -529,10 +625,12 @@ const TeacherDashboard = ({ onLogout }) => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h3 className="text-2xl font-bold text-gray-800">My Classrooms</h3>
-            <p className="text-gray-600">Click on a classroom to view details and manage subjects</p>
+            <p className="text-gray-600">
+              Click on a classroom to view details and manage subjects
+            </p>
           </div>
           <button
-            onClick={() => navigate('/teacher/classrooms')}
+            onClick={() => navigate("/teacher/classrooms")}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -542,8 +640,8 @@ const TeacherDashboard = ({ onLogout }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {classrooms.map((classroom) => (
-            <div 
-              key={classroom.id} 
+            <div
+              key={classroom.id}
               onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
               className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer group"
             >
@@ -552,40 +650,52 @@ const TeacherDashboard = ({ onLogout }) => {
                   <School className="w-6 h-6 text-green-600" />
                 </div>
               </div>
-              
-              <h4 className="text-xl font-bold text-gray-800 mb-2">{classroom.name}</h4>
-              
+
+              <h4 className="text-xl font-bold text-gray-800 mb-2">
+                {classroom.name}
+              </h4>
+
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Code:</span>
-                  <span className="font-mono font-semibold text-blue-600">{classroom.code || 'N/A'}</span>
+                  <span className="font-mono font-semibold text-blue-600">
+                    {classroom.code || "N/A"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Students:</span>
-                  <span className="font-semibold text-gray-800">{classroom.studentCount || 0}</span>
+                  <span className="font-semibold text-gray-800">
+                    {classroom.studentCount || 0}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Subjects:</span>
-                  <span className="font-semibold text-gray-800">{classroom.subjects?.length || 0}</span>
+                  <span className="font-semibold text-gray-800">
+                    {classroom.subjects?.length || 0}
+                  </span>
                 </div>
               </div>
-              
+
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   <span>Academic Year</span>
-                  <span>{classroom.academicYear || 'N/A'}</span>
+                  <span>{classroom.academicYear || "N/A"}</span>
                 </div>
               </div>
             </div>
           ))}
-          
+
           {classrooms.length === 0 && (
             <div className="col-span-full text-center py-16">
               <School className="w-20 h-20 text-gray-300 mx-auto mb-6" />
-              <h4 className="text-xl font-semibold text-gray-600 mb-2">No Classrooms Yet</h4>
-              <p className="text-gray-500 mb-6">Create your first classroom to get started</p>
+              <h4 className="text-xl font-semibold text-gray-600 mb-2">
+                No Classrooms Yet
+              </h4>
+              <p className="text-gray-500 mb-6">
+                Create your first classroom to get started
+              </p>
               <button
-                onClick={() => navigate('/teacher/classrooms')}
+                onClick={() => navigate("/teacher/classrooms")}
                 className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300"
               >
                 Create Classroom
@@ -597,11 +707,11 @@ const TeacherDashboard = ({ onLogout }) => {
 
       {/* QR Generator Modal */}
       {showQRGenerator && (
-        <QRGenerator 
+        <QRGenerator
           onClose={() => {
             setShowQRGenerator(false);
             loadActiveSessions(); // Refresh sessions after creating new one
-          }} 
+          }}
         />
       )}
     </div>
