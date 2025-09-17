@@ -14,7 +14,7 @@ import { db } from './config';
 // Get total counts for dashboard overview
 export const getDashboardOverview = async () => {
   try {
-    console.log('📊 Fetching dashboard overview data...');
+    console.log('📊 Fetching  data...');
     
     // Get total students
     const studentsSnapshot = await getDocs(

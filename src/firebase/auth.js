@@ -375,12 +375,14 @@ export const deleteUser = async (userId, userType, email = null) => {
       console.warn('Cloud Functions not available, falling back to Firestore-only deletion:', functionsError);
       
       // Fallback to Firestore-only deletion
-      const userDoc = doc(db, userType, userId);
+      console.log(`🗑️ Deleting user ${userId} from users collection...`);
+      const userDoc = doc(db, 'users', userId);
       await deleteDoc(userDoc);
+      console.log(`✅ User ${userId} deleted successfully from Firestore`);
 
       return {
         success: true,
-        message: `${userType} deleted from database (Firebase Auth account remains)`,
+        message: `User deleted from database (Firebase Auth account remains)`,
         completeDeletion: false,
         warning: 'Email address cannot be reused until Firebase Auth account is manually deleted'
       };
@@ -419,15 +421,17 @@ export const deactivateUser = async (userId, userType, email = null) => {
       console.warn('Cloud Functions not available, falling back to Firestore-only deactivation:', functionsError);
       
       // Fallback to Firestore-only deactivation
-      const userDoc = doc(db, userType, userId);
+      console.log(`🔒 Deactivating user ${userId} in users collection...`);
+      const userDoc = doc(db, 'users', userId);
       await updateDoc(userDoc, {
         isActive: false,
         deactivatedAt: new Date().toISOString()
       });
+      console.log(`✅ User ${userId} deactivated successfully in Firestore`);
 
       return {
         success: true,
-        message: `${userType} deactivated in database (Firebase Auth account remains active)`,
+        message: `User deactivated in database (Firebase Auth account remains active)`,
         completeDeactivation: false
       };
     }

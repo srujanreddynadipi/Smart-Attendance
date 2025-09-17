@@ -191,10 +191,10 @@ const DashboardOverviewOptimized = ({ analytics, loadingStates, onRefresh }) => 
     <div className="space-y-6">
       {/* Header with refresh button */}
       <div className="flex items-center justify-between">
-        <div>
+        {/* <div>
           <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
           <p className="text-gray-600">Welcome to the school management system</p>
-        </div>
+        </div> */}
         <button
           onClick={onRefresh}
           disabled={loadingStates.overview}
