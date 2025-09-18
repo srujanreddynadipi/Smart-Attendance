@@ -21,6 +21,13 @@ import {
   StopCircle,
   School,
   BookOpen,
+  Trophy,
+  Award,
+  Gift,
+  History,
+  Target,
+  BarChart3,
+  Home,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -35,6 +42,14 @@ import {
 } from "../firebase/attendance";
 import { getTeacherClassrooms } from "../firebase/classrooms";
 import { exportAttendanceToExcel, exportMultipleSessionsToExcel } from "../utils/excelExport";
+import PointsBalance from "../components/PointsBalance";
+import NotificationDisplay from "../components/NotificationDisplay";
+import PointsLeaderboard from "../components/PointsLeaderboard";
+import TransactionHistory from "../components/TransactionHistory";
+import CouponStore from "../components/CouponStore";
+import RedeemedCoupons from "../components/RedeemedCoupons";
+import QuickAwardPoints from "../components/QuickAwardPoints";
+import { initializeUserPoints } from "../firebase/pointsSystem";
 
 const TeacherDashboard = ({ onLogout }) => {
   const { userData } = useAuth();
@@ -50,6 +65,10 @@ const TeacherDashboard = ({ onLogout }) => {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  
+  // Tab navigation state
+  const [activeTab, setActiveTab] = useState('sessions');
+  const [activeRewardTab, setActiveRewardTab] = useState('award');
 
   // Helper functions for date/time formatting
   const formatDate = (timestamp) => {
@@ -310,6 +329,7 @@ const TeacherDashboard = ({ onLogout }) => {
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              <NotificationDisplay />
               <button
                 onClick={() => {
                   loadActiveSessions();
@@ -338,7 +358,34 @@ const TeacherDashboard = ({ onLogout }) => {
           </div>
         )}
 
-        {/* Main Content Grid */}
+        {/* Tab Navigation */}
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-2 shadow-xl border border-white/50 mb-6">
+          <div className="flex space-x-1">
+            {[
+              { id: 'sessions', label: 'Sessions', icon: Calendar },
+              { id: 'rewards', label: 'Rewards', icon: Trophy },
+              { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+              { id: 'settings', label: 'Settings', icon: Settings }
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+                  activeTab === id
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                    : 'text-gray-600 hover:bg-white/50'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'sessions' && (
+          <div className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Column - Controls */}
           <div className="space-y-8">
@@ -797,6 +844,7 @@ const TeacherDashboard = ({ onLogout }) => {
           </div>
         </div>
       </div>
+        )}
 
       {/* My Classrooms Section */}
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -882,6 +930,138 @@ const TeacherDashboard = ({ onLogout }) => {
           )}
         </div>
       </div>
+          </div>
+
+        {/* Rewards Tab */}
+        {activeTab === 'rewards' && (
+          <div className="space-y-6">
+            {/* Rewards Header */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">🏆 Student Rewards Management</h2>
+              <p className="text-gray-600">Award points, manage the leaderboard, and oversee coupon redemptions</p>
+            </div>
+
+            {/* Rewards Sub-tabs */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-2 shadow-xl border border-white/50">
+              <div className="flex space-x-1">
+                {[
+                  { id: 'award', label: 'Award Points', icon: Award },
+                  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+                  { id: 'history', label: 'History', icon: History },
+                  { id: 'coupons', label: 'Coupons', icon: Gift }
+                ].map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => setActiveRewardTab(id)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+                      activeRewardTab === id
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg'
+                        : 'text-gray-600 hover:bg-white/50'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Rewards Content */}
+            {activeRewardTab === 'award' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <QuickAwardPoints />
+                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4">Award Guidelines</h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <div>
+                        <div className="font-semibold text-green-800">Green Points: Attendance</div>
+                        <div className="text-green-600">Perfect attendance, punctuality</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <div>
+                        <div className="font-semibold text-blue-800">Blue Points: Academic</div>
+                        <div className="text-blue-600">High grades, assignments, participation</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
+                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                      <div>
+                        <div className="font-semibold text-yellow-800">Yellow Points: Behavior</div>
+                        <div className="text-yellow-600">Good conduct, helping others</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
+                      <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                      <div>
+                        <div className="font-semibold text-purple-800">Purple Points: Activities</div>
+                        <div className="text-purple-600">Sports, clubs, events</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeRewardTab === 'leaderboard' && (
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="xl:col-span-2">
+                  <PointsLeaderboard />
+                </div>
+                <div className="space-y-4">
+                  <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4">Leaderboard Actions</h3>
+                    <div className="space-y-3">
+                      <button className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white p-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                        Reset Monthly Rankings
+                      </button>
+                      <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                        Export Rankings
+                      </button>
+                      <button className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white p-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                        Award Batch Points
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeRewardTab === 'history' && (
+              <TransactionHistory showAllUsers={true} />
+            )}
+
+            {activeRewardTab === 'coupons' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <CouponStore isTeacherView={true} />
+                <RedeemedCoupons isTeacherView={true} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-6">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">📊 Analytics Dashboard</h2>
+              <p className="text-gray-600">Coming soon - Attendance analytics, grade trends, and performance insights</p>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">⚙️ Settings</h2>
+              <p className="text-gray-600">Configure your preferences, notification settings, and account information</p>
+            </div>
+          </div>
+        )}
 
       {/* QR Generator Modal */}
       {showQRGenerator && (

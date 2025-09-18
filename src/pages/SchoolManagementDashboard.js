@@ -10,7 +10,12 @@ import {
   LogOut, 
   ClipboardCheck,
   Menu,
-  X
+  X,
+  Trophy,
+  Award,
+  Gift,
+  History,
+  Target
 } from 'lucide-react';
 import { logoutUser } from '../firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +35,242 @@ import { useDashboardDataOptimized } from './Admin/hooks/useDashboardDataOptimiz
 import DashboardOverviewOptimized from './Admin/components/DashboardOverviewOptimized';
 import { DashboardSkeleton } from '../components/SkeletonLoaders';
 import { PerformanceMonitor } from '../components/PerformanceMonitor';
+
+// Import Points and Coupon components
+import PointsBalance from '../components/PointsBalance';
+import PointsLeaderboard from '../components/PointsLeaderboard';
+import TransactionHistory from '../components/TransactionHistory';
+import CouponStore from '../components/CouponStore';
+import RedeemedCoupons from '../components/RedeemedCoupons';
+import QuickAwardPoints from '../components/QuickAwardPoints';
+
+// Rewards Admin Panel Component
+const RewardsAdminPanel = () => {
+  const [activeRewardTab, setActiveRewardTab] = useState('overview');
+
+  return (
+    <div className="space-y-6">
+      {/* Rewards Header */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">🏆 School Rewards Management</h2>
+        <p className="text-gray-600">Comprehensive management of the school's rewards and recognition system</p>
+      </div>
+
+      {/* Rewards Sub-tabs */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-2 shadow-xl border border-white/50">
+        <div className="flex space-x-1">
+          {[
+            { id: 'overview', label: 'Overview', icon: Award },
+            { id: 'manage', label: 'Manage Points', icon: Target },
+            { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+            { id: 'history', label: 'History', icon: History },
+            { id: 'coupons', label: 'Coupons', icon: Gift }
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveRewardTab(id)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+                activeRewardTab === id
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg'
+                  : 'text-gray-600 hover:bg-white/50'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Rewards Content */}
+      {activeRewardTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl flex items-center justify-center">
+                  <Award className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">12,543</div>
+                  <div className="text-sm text-gray-600">Total Points Awarded</div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl flex items-center justify-center">
+                  <Users className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">1,234</div>
+                  <div className="text-sm text-gray-600">Active Students</div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl flex items-center justify-center">
+                  <Gift className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">456</div>
+                  <div className="text-sm text-gray-600">Coupons Redeemed</div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-orange-100 to-red-100 rounded-xl flex items-center justify-center">
+                  <Trophy className="w-6 h-6 text-orange-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">89%</div>
+                  <div className="text-sm text-gray-600">Student Engagement</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">System Quick Actions</h3>
+              <div className="space-y-3">
+                <button className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white p-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                  Bulk Award Points
+                </button>
+                <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                  Create New Coupon Campaign
+                </button>
+                <button className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white p-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                  Export Rewards Report
+                </button>
+                <button className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white p-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                  Reset Monthly Leaderboard
+                </button>
+              </div>
+            </div>
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Points Distribution</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                    <span className="font-semibold text-green-800">Green Points</span>
+                  </div>
+                  <span className="text-green-600 font-bold">3,456</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+                    <span className="font-semibold text-blue-800">Blue Points</span>
+                  </div>
+                  <span className="text-blue-600 font-bold">4,123</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
+                    <span className="font-semibold text-yellow-800">Yellow Points</span>
+                  </div>
+                  <span className="text-yellow-600 font-bold">2,789</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-purple-500 rounded-full"></div>
+                    <span className="font-semibold text-purple-800">Purple Points</span>
+                  </div>
+                  <span className="text-purple-600 font-bold">2,175</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeRewardTab === 'manage' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <QuickAwardPoints isAdminView={true} />
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Bulk Point Management</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Award Points to Grade/Class</label>
+                <select className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                  <option>Grade 9 - Section A</option>
+                  <option>Grade 10 - Section B</option>
+                  <option>Grade 11 - Section A</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Points Amount</label>
+                <input type="number" className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter points amount" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Reason</label>
+                <textarea className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500" rows="3" placeholder="Enter reason for points award"></textarea>
+              </div>
+              <button className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white p-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                Award Points to Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeRewardTab === 'leaderboard' && (
+        <div className="space-y-6">
+          <PointsLeaderboard isAdminView={true} />
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Leaderboard Management</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                Monthly Reset
+              </button>
+              <button className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                Award Top Performers
+              </button>
+              <button className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                Export Rankings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeRewardTab === 'history' && (
+        <TransactionHistory showAllUsers={true} isAdminView={true} />
+      )}
+
+      {activeRewardTab === 'coupons' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CouponStore isAdminView={true} />
+            <RedeemedCoupons isAdminView={true} />
+          </div>
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Coupon Campaign Management</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                Create New Campaign
+              </button>
+              <button className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white p-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                Manage Partnerships
+              </button>
+              <button className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                Analytics Dashboard
+              </button>
+              <button className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-300">
+                Export Reports
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const SchoolManagementDashboard = ({ onLogout }) => {
   const { userData } = useAuth();
@@ -128,6 +369,7 @@ const SchoolManagementDashboard = ({ onLogout }) => {
     { id: 'students', label: 'Students', icon: GraduationCap },
     { id: 'teachers', label: 'Teachers', icon: Users },
     { id: 'parents', label: 'Parents', icon: BookOpen },
+    { id: 'rewards', label: 'Rewards', icon: Trophy },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'requests', label: 'Requests', icon: ClipboardCheck, badge: pendingRequestsCount },
   ];
@@ -359,6 +601,8 @@ const SchoolManagementDashboard = ({ onLogout }) => {
               loadingStates={loadingStates}
               onRefresh={refreshData}
             />
+          ) : activeTab === 'rewards' ? (
+            <RewardsAdminPanel />
           ) : (
             <div className="text-center py-12 text-gray-500">
               <p>Content for {activeTab} coming soon...</p>

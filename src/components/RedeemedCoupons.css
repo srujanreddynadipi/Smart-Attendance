@@ -1,0 +1,410 @@
+.redeemed-coupons {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.redeemed-coupons.loading,
+.redeemed-coupons.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.loading-content,
+.error-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  text-align: center;
+  padding: 40px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e9ecef;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-content {
+  color: #dc3545;
+}
+
+.error-icon {
+  font-size: 48px;
+}
+
+.retry-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-weight: 500;
+}
+
+.retry-btn:hover {
+  background: #c82333;
+}
+
+.coupons-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.header-content h2 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.header-content p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 16px;
+}
+
+.status-summary {
+  display: flex;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 15px 20px;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 60px;
+}
+
+.status-item .count {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.status-item .label {
+  font-size: 12px;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-item.active .count {
+  color: #00b894;
+}
+
+.status-item.used .count {
+  color: #74b9ff;
+}
+
+.status-item.expired .count {
+  color: #fd79a8;
+}
+
+.coupons-controls {
+  background: #f8f9fa;
+  padding: 20px;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-group,
+.sort-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 150px;
+}
+
+.filter-group label,
+.sort-group label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-select,
+.sort-select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.filter-select:focus,
+.sort-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.refresh-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.refresh-btn:hover {
+  background: #5a6fd8;
+  transform: translateY(-1px);
+}
+
+.empty-coupons {
+  text-align: center;
+  padding: 80px 20px;
+  color: #6c757d;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.empty-coupons h3 {
+  margin: 0 0 15px 0;
+  color: #495057;
+  font-size: 24px;
+}
+
+.empty-coupons p {
+  margin: 0;
+  font-size: 16px;
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.coupons-grid {
+  padding: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.coupon-wrapper {
+  position: relative;
+}
+
+.coupon-actions {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mark-used-btn {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.mark-used-btn:hover {
+  background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+  transform: translateY(-1px);
+}
+
+.expiry-warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    background: #fff3cd;
+  }
+  50% {
+    background: #ffeaa7;
+  }
+}
+
+.coupons-footer {
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.footer-stats {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.footer-tips {
+  color: #6c757d;
+  text-align: right;
+  max-width: 400px;
+}
+
+.footer-tips small {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .coupons-header {
+    padding: 20px;
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .header-content h2 {
+    font-size: 24px;
+  }
+  
+  .status-summary {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .coupons-controls {
+    padding: 15px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+  
+  .filter-group,
+  .sort-group {
+    min-width: auto;
+  }
+  
+  .refresh-btn {
+    margin-left: 0;
+    align-self: center;
+  }
+  
+  .coupons-grid {
+    padding: 20px;
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .coupons-footer {
+    padding: 15px 20px;
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .footer-tips {
+    text-align: center;
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .coupons-header {
+    padding: 15px;
+  }
+  
+  .header-content h2 {
+    font-size: 20px;
+  }
+  
+  .header-content p {
+    font-size: 14px;
+  }
+  
+  .status-summary {
+    padding: 12px 15px;
+    gap: 15px;
+  }
+  
+  .status-item {
+    min-width: 50px;
+  }
+  
+  .status-item .count {
+    font-size: 20px;
+  }
+  
+  .coupons-controls {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .coupons-grid {
+    padding: 15px;
+    gap: 12px;
+  }
+  
+  .empty-coupons {
+    padding: 60px 15px;
+  }
+  
+  .empty-icon {
+    font-size: 48px;
+  }
+  
+  .empty-coupons h3 {
+    font-size: 20px;
+  }
+  
+  .empty-coupons p {
+    font-size: 14px;
+  }
+}

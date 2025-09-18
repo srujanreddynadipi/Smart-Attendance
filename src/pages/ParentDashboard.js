@@ -30,7 +30,10 @@ import {
   UserPlus,
   Send,
   Loader,
-  FileText
+  FileText,
+  Trophy,
+  Gift,
+  History
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -42,6 +45,11 @@ import {
 } from '../firebase/parent';
 import { createChildRequest, getParentRequestHistory } from '../firebase/childRequests';
 import { getChildDetails } from '../firebase/studentDetails';
+import PointsBalance from '../components/PointsBalance';
+import PointsLeaderboard from '../components/PointsLeaderboard';
+import TransactionHistory from '../components/TransactionHistory';
+import CouponStore from '../components/CouponStore';
+import RedeemedCoupons from '../components/RedeemedCoupons';
 
 const ParentDashboard = ({ onLogout }) => {
   const { currentUser } = useAuth();
@@ -54,6 +62,8 @@ const ParentDashboard = ({ onLogout }) => {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
+  // Rewards sub-tab state (hoisted to top level to comply with Hooks rules)
+  const [activeRewardTab, setActiveRewardTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('this-week');
   const [showAddChildModal, setShowAddChildModal] = useState(false);
@@ -123,10 +133,11 @@ const ParentDashboard = ({ onLogout }) => {
     try {
       const attendanceResult = await getChildrenAttendance(currentUser.uid, dateFilter);
       if (attendanceResult.success) {
-        setAttendanceData(attendanceResult.attendance);
+        const attendanceArray = attendanceResult.attendance || [];
+        setAttendanceData(attendanceArray);
         
         // Generate notifications from recent absences/lates
-        const recentNotifications = attendanceResult.attendance
+        const recentNotifications = attendanceArray
           .filter(record => {
             const recordDate = new Date(record.date || record.createdAt);
             const threeDaysAgo = new Date();
@@ -142,12 +153,16 @@ const ParentDashboard = ({ onLogout }) => {
           }));
         
         setNotifications(recentNotifications);
-        console.log('✅ Loaded attendance data:', attendanceResult.attendance.length, 'records');
+        console.log('✅ Loaded attendance data:', attendanceArray.length, 'records');
       } else {
         console.warn('⚠️ Failed to load attendance:', attendanceResult.error);
+        // Ensure notifications is reset to empty array on error
+        setNotifications([]);
       }
     } catch (error) {
       console.error('❌ Error loading attendance data:', error);
+      // Ensure notifications is reset to empty array on error
+      setNotifications([]);
     }
   };
 
@@ -239,7 +254,8 @@ const ParentDashboard = ({ onLogout }) => {
   };
 
   const getAttendanceStats = (studentId) => {
-    const childAttendance = attendanceData.filter(record => record.studentId === studentId);
+    const safeAttendanceData = attendanceData || [];
+    const childAttendance = safeAttendanceData.filter(record => record.studentId === studentId);
     const totalClasses = childAttendance.length;
     const presentClasses = childAttendance.filter(record => record.status === 'present').length;
     const attendanceRate = totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 100) : 0;
@@ -277,7 +293,7 @@ const ParentDashboard = ({ onLogout }) => {
             </div>
             <div>
               <div className="text-3xl font-bold text-emerald-600">
-                {attendanceData.filter(record => {
+                {(attendanceData || []).filter(record => {
                   const recordDate = new Date(record.timestamp);
                   const today = new Date();
                   return recordDate.toDateString() === today.toDateString() && record.status === 'present';
@@ -383,7 +399,7 @@ const ParentDashboard = ({ onLogout }) => {
                   <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                     <span className="text-gray-600 font-medium">Today's Status</span>
                     <div className="flex space-x-2">
-                      {attendanceData
+                      {(attendanceData || [])
                         .filter(record => {
                           const recordDate = new Date(record.date || record.timestamp || record.createdAt);
                           const today = new Date();
@@ -404,7 +420,7 @@ const ParentDashboard = ({ onLogout }) => {
                           </span>
                         ))
                       }
-                      {attendanceData.filter(record => {
+                      {(attendanceData || []).filter(record => {
                         const recordDate = new Date(record.date || record.timestamp || record.createdAt);
                         const today = new Date();
                         return record.studentId === child.studentId && recordDate.toDateString() === today.toDateString();
@@ -441,7 +457,7 @@ const ParentDashboard = ({ onLogout }) => {
           </button>
         </div>
         <div className="space-y-4">
-          {notifications.map((notification) => (
+          {(notifications || []).map((notification) => (
             <div key={notification.id} className="bg-white/60 rounded-2xl p-4 border border-white/50">
               <div className="flex items-start space-x-4">
                 <div className={`p-3 rounded-xl ${
@@ -464,6 +480,135 @@ const ParentDashboard = ({ onLogout }) => {
       </div>
     </div>
   );
+
+  const renderRewards = () => {
+    return (
+      <div className="space-y-6">
+        {/* Rewards Header */}
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">🏆 Children's Rewards</h2>
+          <p className="text-gray-600">Track your children's points, view their achievements, and monitor coupon redemptions</p>
+        </div>
+
+        {/* Rewards Sub-tabs */}
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-2 shadow-xl border border-white/50">
+          <div className="flex space-x-1">
+            {[
+              { id: 'overview', label: 'Overview', icon: Award },
+              { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+              { id: 'history', label: 'History', icon: History },
+              { id: 'coupons', label: 'Coupons', icon: Gift }
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveRewardTab(id)}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+                  activeRewardTab === id
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
+                    : 'text-gray-600 hover:bg-white/50'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Rewards Content */}
+        {activeRewardTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Children's Points Overview */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {children.map((child) => (
+                <div key={child.id} className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl flex items-center justify-center">
+                      <User className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800">{child.name}</h3>
+                      <p className="text-sm text-gray-600">{child.grade || 'Grade N/A'}</p>
+                    </div>
+                  </div>
+                  <PointsBalance userId={child.studentId} view="compact" />
+                </div>
+              ))}
+            </div>
+
+            {/* Recent Activity */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Recent Reward Activity</h3>
+              {children.length > 0 ? (
+                <TransactionHistory userId={children[0]?.studentId} showRecentOnly={true} />
+              ) : (
+                <p className="text-gray-600">No children registered yet.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeRewardTab === 'leaderboard' && (
+          <div className="space-y-6">
+            <PointsLeaderboard />
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Your Children's Rankings</h3>
+              <div className="space-y-3">
+                {children.map((child) => (
+                  <div key={child.id} className="flex items-center gap-4 p-3 bg-white/60 rounded-lg">
+                    <div className="w-10 h-10 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg flex items-center justify-center">
+                      <User className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-800">{child.name}</div>
+                      <div className="text-sm text-gray-600">Track their progress</div>
+                    </div>
+                    <PointsBalance userId={child.studentId} view="compact" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeRewardTab === 'history' && (
+          <div className="space-y-6">
+            {children.map((child) => (
+              <div key={child.id} className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg flex items-center justify-center">
+                    <User className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800">{child.name}'s Transaction History</h3>
+                </div>
+                <TransactionHistory userId={child.studentId} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeRewardTab === 'coupons' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Available Coupons</h3>
+                <CouponStore isParentView={true} />
+              </div>
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/50">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Children's Redeemed Coupons</h3>
+                {children.map((child) => (
+                  <div key={child.id} className="mb-6">
+                    <h4 className="font-semibold text-gray-700 mb-2">{child.name}</h4>
+                    <RedeemedCoupons userId={child.studentId} isParentView={true} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderAttendance = () => (
     <div className="space-y-8">
@@ -519,7 +664,7 @@ const ParentDashboard = ({ onLogout }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {attendanceData
+              {(attendanceData || [])
                 .filter(record => !selectedChild || record.studentId === selectedChild.studentId)
                 .map((record, index) => {
                   const child = children.find(c => c.studentId === record.studentId);
@@ -794,6 +939,7 @@ const ParentDashboard = ({ onLogout }) => {
           <div className="flex space-x-1">
             {[
               { id: 'overview', label: 'Overview', icon: Home },
+              { id: 'rewards', label: 'Rewards', icon: Trophy },
               { id: 'attendance', label: 'Attendance', icon: Calendar },
               { id: 'communication', label: 'Communication', icon: MessageCircle },
               { id: 'reports', label: 'Reports', icon: BarChart3 }
@@ -821,6 +967,7 @@ const ParentDashboard = ({ onLogout }) => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'rewards' && renderRewards()}
         {activeTab === 'attendance' && renderAttendance()}
         {activeTab === 'communication' && renderCommunication()}
         {activeTab === 'reports' && renderReports()}

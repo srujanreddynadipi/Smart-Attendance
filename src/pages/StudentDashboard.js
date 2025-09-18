@@ -24,7 +24,11 @@ import {
   BookOpen,
   Plus,
   School,
+  Trophy,
+  History,
+  Gift,
 } from "lucide-react";
+import NotificationDisplay from '../components/NotificationDisplay';
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
 import { logoutUser } from "../firebase/auth";
@@ -42,6 +46,12 @@ import {
 import { joinClassroom, getStudentClassrooms } from "../firebase/classrooms";
 import StudentGrades from "../components/StudentGrades";
 import ProfilePage from "./ProfilePage";
+import PointsBalance from "../components/PointsBalance";
+import PointsLeaderboard from "../components/PointsLeaderboard";
+import TransactionHistory from "../components/TransactionHistory";
+import CouponStore from "../components/CouponStore";
+import RedeemedCoupons from "../components/RedeemedCoupons";
+import { initializeUserPoints } from "../firebase/pointsSystem";
 
 const StudentDashboard = ({ onLogout }) => {
   const { userData } = useAuth();
@@ -93,6 +103,27 @@ const StudentDashboard = ({ onLogout }) => {
   const [subjectMarks, setSubjectMarks] = useState([]);
   const [isLoadingDashboardData, setIsLoadingDashboardData] = useState(true);
   const [dashboardError, setDashboardError] = useState(null);
+
+  // Points and rewards state
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
+  const [activeRewardTab, setActiveRewardTab] = useState('overview');
+  
+  // Main navigation state
+  const [activeTab, setActiveTab] = useState('home');
+
+  // Initialize user points when component mounts
+  useEffect(() => {
+    const initPoints = async () => {
+      if (userData?.uid) {
+        try {
+          await initializeUserPoints(userData.uid, userData.displayName || userData.name);
+        } catch (error) {
+          console.error('Error initializing user points:', error);
+        }
+      }
+    };
+    initPoints();
+  }, [userData]);
 
   // Load dashboard data when component mounts
   useEffect(() => {
@@ -906,6 +937,239 @@ const StudentDashboard = ({ onLogout }) => {
     </div>
   );
 
+  // Rewards Tab Component
+  const RewardsTab = () => (
+    <div className="space-y-4 sm:space-y-6">
+      {/* Rewards Tab Header */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">🏆 Rewards Center</h2>
+        <p className="text-gray-600">Earn points, climb the leaderboard, and redeem amazing coupons!</p>
+      </div>
+
+      {/* Sub-tab Navigation for Rewards */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-2 shadow-xl border border-white/50">
+        <div className="flex space-x-1">
+          {[
+            { id: 'overview', label: 'Overview', icon: Award },
+            { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+            { id: 'history', label: 'History', icon: History },
+            { id: 'coupons', label: 'Coupons', icon: Gift }
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveRewardTab(id)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+                activeRewardTab === id
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                  : 'text-gray-600 hover:bg-white/50'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Rewards Content */}
+      {activeRewardTab === 'overview' && (
+        <div className="space-y-4 sm:space-y-6">
+          <PointsBalance userId={userData?.uid} view="detailed" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <PointsLeaderboard />
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Quick Actions</h3>
+              <div className="space-y-3">
+                <button
+                  onClick={() => setActiveRewardTab('leaderboard')}
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white p-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300"
+                >
+                  View Full Leaderboard
+                </button>
+                <button
+                  onClick={() => setActiveRewardTab('coupons')}
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300"
+                >
+                  Browse Coupons
+                </button>
+                <button
+                  onClick={() => setActiveRewardTab('history')}
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white p-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300"
+                >
+                  View Transaction History
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeRewardTab === 'leaderboard' && (
+        <div className="space-y-4 sm:space-y-6">
+          <PointsLeaderboard />
+          <PointsBalance userId={userData?.uid} view="compact" />
+        </div>
+      )}
+
+      {activeRewardTab === 'history' && (
+        <div className="space-y-4 sm:space-y-6">
+          <TransactionHistory userId={userData?.uid} />
+          <PointsBalance userId={userData?.uid} view="compact" />
+        </div>
+      )}
+
+      {activeRewardTab === 'coupons' && (
+        <div className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <CouponStore userId={userData?.uid} />
+            <RedeemedCoupons userId={userData?.uid} />
+          </div>
+          <PointsBalance userId={userData?.uid} view="compact" />
+        </div>
+      )}
+    </div>
+  );
+
+  // Grades Tab Component
+  const GradesTab = () => (
+    <div className="space-y-4 sm:space-y-6">
+      {/* Grades Header */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">📊 Academic Performance</h2>
+        <p className="text-gray-600">Track your grades and academic progress across all subjects</p>
+      </div>
+
+      {/* Overall Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+          <div className="text-center">
+            <div className="text-3xl sm:text-4xl font-bold text-purple-600 mb-2">{overallPercentage}%</div>
+            <div className="text-gray-600">Overall Grade</div>
+          </div>
+        </div>
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+          <div className="text-center">
+            <div className="text-3xl sm:text-4xl font-bold text-green-600 mb-2">4.2</div>
+            <div className="text-gray-600">CGPA</div>
+          </div>
+        </div>
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+          <div className="text-center">
+            <div className="text-3xl sm:text-4xl font-bold text-blue-600 mb-2">{subjectMarks.length}</div>
+            <div className="text-gray-600">Subjects</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Detailed Grades */}
+      <StudentGrades studentId={userData?.uid} classrooms={studentClassrooms} />
+    </div>
+  );
+
+  // Attendance Tab Component
+  const AttendanceTab = () => (
+    <div className="space-y-4 sm:space-y-6">
+      {/* Attendance Header */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">📅 Attendance Tracking</h2>
+        <p className="text-gray-600">Monitor your attendance record and mark attendance for classes</p>
+      </div>
+
+      {/* Attendance Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-xl border border-white/50">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">{attendancePercentage}%</div>
+            <div className="text-gray-600 text-sm">Overall</div>
+          </div>
+        </div>
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-xl border border-white/50">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">{attendanceStats.present}</div>
+            <div className="text-gray-600 text-sm">Present</div>
+          </div>
+        </div>
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-xl border border-white/50">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-orange-600">{attendanceStats.late}</div>
+            <div className="text-gray-600 text-sm">Late</div>
+          </div>
+        </div>
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-xl border border-white/50">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-red-600">{attendanceStats.absent}</div>
+            <div className="text-gray-600 text-sm">Absent</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Mark Attendance */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Mark Attendance</h3>
+        <button
+          onClick={startQRScanner}
+          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+        >
+          <div className="flex items-center justify-center gap-3">
+            <QrCode className="w-6 h-6" />
+            <span>Scan QR Code to Mark Attendance</span>
+          </div>
+        </button>
+      </div>
+
+      {/* Recent Attendance Records */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-white/50">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-800">
+            Recent Attendance
+          </h3>
+          <div className="text-sm text-gray-600">
+            {attendanceRecords.length} Records
+          </div>
+        </div>
+        <div className="space-y-3 sm:space-y-4">
+          {attendanceRecords.slice(0, 10).map((record, index) => (
+            <div
+              key={index}
+              className="bg-white/60 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/50 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-800 truncate">
+                    {record.subject}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {record.date} • {record.time}
+                  </div>
+                </div>
+                <div
+                  className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${
+                    record.status === "present"
+                      ? "bg-green-100 text-green-700"
+                      : record.status === "late"
+                      ? "bg-orange-100 text-orange-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {record.status === "present" && (
+                    <CheckCircle className="w-4 h-4 inline mr-1" />
+                  )}
+                  {record.status === "absent" && (
+                    <XCircle className="w-4 h-4 inline mr-1" />
+                  )}
+                  {record.status === "late" && (
+                    <Clock className="w-4 h-4 inline mr-1" />
+                  )}
+                  {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   // Attendance Process Steps
   const AttendanceSteps = () => {
     if (currentStep === "scan") {
@@ -1069,9 +1333,7 @@ const StudentDashboard = ({ onLogout }) => {
               >
                 <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
               </button>
-              <button className="p-2 bg-white/70 rounded-xl border border-white/50 hover:bg-white/90 transition-all duration-300">
-                <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-              </button>
+              <NotificationDisplay />
               <button className="hidden sm:block p-2 bg-white/70 rounded-xl border border-white/50 hover:bg-white/90 transition-all duration-300">
                 <Settings className="w-5 h-5 text-gray-600" />
               </button>
@@ -1091,7 +1353,38 @@ const StudentDashboard = ({ onLogout }) => {
         {currentStep === "profile" ? (
           <ProfilePage onBack={handleBackToHome} />
         ) : (
-          <HomeDashboard />
+          <>
+            {/* Tab Navigation */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-2 shadow-xl border border-white/50 mb-6">
+              <div className="flex space-x-1">
+                {[
+                  { id: 'home', label: 'Home', icon: Home },
+                  { id: 'rewards', label: 'Rewards', icon: Trophy },
+                  { id: 'grades', label: 'Grades', icon: BarChart3 },
+                  { id: 'attendance', label: 'Attendance', icon: Calendar }
+                ].map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => setActiveTab(id)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+                      activeTab === id
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                        : 'text-gray-600 hover:bg-white/50'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'home' && <HomeDashboard />}
+            {activeTab === 'rewards' && <RewardsTab />}
+            {activeTab === 'grades' && <GradesTab />}
+            {activeTab === 'attendance' && <AttendanceTab />}
+          </>
         )}
       </div>
 
