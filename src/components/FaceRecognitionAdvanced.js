@@ -211,6 +211,7 @@ const FaceRecognition = ({
             playsInline
             muted
             className="w-full h-64 object-cover"
+            style={{ transform: 'scaleX(-1)' }}
           />
           
           {/* Overlay Effects */}

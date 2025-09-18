@@ -29,10 +29,12 @@ import { logoutUser } from "../firebase/auth";
 import QRGenerator from "../components/QRGenerator";
 import {
   getTeacherSessions,
+  getTeacherAllSessions,
   endAttendanceSession,
   getSessionAttendance,
 } from "../firebase/attendance";
 import { getTeacherClassrooms } from "../firebase/classrooms";
+import { exportAttendanceToExcel, exportMultipleSessionsToExcel } from "../utils/excelExport";
 
 const TeacherDashboard = ({ onLogout }) => {
   const { userData } = useAuth();
@@ -40,6 +42,7 @@ const TeacherDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
   const [showQRGenerator, setShowQRGenerator] = useState(false);
   const [activeSessions, setActiveSessions] = useState([]);
+  const [recentSessions, setRecentSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [sessionAttendance, setSessionAttendance] = useState([]);
   const [classrooms, setClassrooms] = useState([]);
@@ -81,10 +84,14 @@ const TeacherDashboard = ({ onLogout }) => {
   useEffect(() => {
     if (userData?.uid) {
       loadActiveSessions();
+      loadRecentSessions();
       loadClassrooms();
 
       // Auto-refresh sessions every 30 seconds
-      const interval = setInterval(loadActiveSessions, 30000);
+      const interval = setInterval(() => {
+        loadActiveSessions();
+        loadRecentSessions();
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [userData]);
@@ -117,6 +124,19 @@ const TeacherDashboard = ({ onLogout }) => {
       setError("Failed to load sessions");
     }
     setLoading(false);
+  };
+
+  const loadRecentSessions = async () => {
+    try {
+      const result = await getTeacherAllSessions(userData.uid, 20);
+      if (result.success) {
+        setRecentSessions(result.sessions);
+      } else {
+        console.error("Failed to load recent sessions:", result.error);
+      }
+    } catch (error) {
+      console.error("Error loading recent sessions:", error);
+    }
   };
 
   const loadClassrooms = async () => {
@@ -168,9 +188,15 @@ const TeacherDashboard = ({ onLogout }) => {
         if (result.success) {
           showSuccess("Session ended successfully");
           await loadActiveSessions();
+          await loadRecentSessions();
+          
+          // Update the selected session to reflect the ended status
           if (selectedSession?.sessionId === sessionId) {
-            setSelectedSession(null);
-            setSessionAttendance([]);
+            setSelectedSession({
+              ...selectedSession,
+              isActive: false,
+              endedAt: new Date()
+            });
           }
         } else {
           showError(result.error || "Failed to end session");
@@ -179,6 +205,56 @@ const TeacherDashboard = ({ onLogout }) => {
         console.error("Error ending session:", error);
         showError("Failed to end session. Please try again.");
       }
+    }
+  };
+
+  const handleExportAttendance = async () => {
+    if (!selectedSession || sessionAttendance.length === 0) {
+      showError("No attendance data to export");
+      return;
+    }
+
+    try {
+      const result = exportAttendanceToExcel(sessionAttendance, selectedSession);
+      if (result.success) {
+        showSuccess(`Excel file downloaded: ${result.fileName}`);
+      } else {
+        showError(result.message);
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      showError("Failed to export attendance data");
+    }
+  };
+
+  const handleExportAllSessions = async () => {
+    try {
+      const sessionsWithAttendance = [];
+      
+      for (const session of recentSessions.slice(0, 5)) {
+        const attendanceResult = await getSessionAttendance(session.sessionId);
+        if (attendanceResult.success) {
+          sessionsWithAttendance.push({
+            session: session,
+            attendance: attendanceResult.records
+          });
+        }
+      }
+      
+      if (sessionsWithAttendance.length === 0) {
+        showError("No sessions with attendance data found");
+        return;
+      }
+      
+      const result = exportMultipleSessionsToExcel(sessionsWithAttendance);
+      if (result.success) {
+        showSuccess(`Multi-session Excel file downloaded: ${result.fileName}`);
+      } else {
+        showError(result.message);
+      }
+    } catch (error) {
+      console.error("Export all sessions error:", error);
+      showError("Failed to export all sessions data");
     }
   };
 
@@ -235,7 +311,10 @@ const TeacherDashboard = ({ onLogout }) => {
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <button
-                onClick={() => loadActiveSessions()}
+                onClick={() => {
+                  loadActiveSessions();
+                  loadRecentSessions();
+                }}
                 className="bg-blue-100 text-blue-700 p-2 sm:p-3 rounded-xl hover:bg-blue-200 transition-all duration-300"
                 title="Refresh"
               >
@@ -281,7 +360,7 @@ const TeacherDashboard = ({ onLogout }) => {
 
               <button
                 onClick={() => setShowQRGenerator(true)}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 m-2"
               >
                 <div className="flex items-center justify-center gap-2">
                   <QrCode className="w-5 h-5" />
@@ -400,6 +479,100 @@ const TeacherDashboard = ({ onLogout }) => {
               )}
             </div>
 
+            {/* Recent Sessions */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-100 to-blue-100 rounded-xl flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-800">
+                    Recent Sessions
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Last {recentSessions.length} sessions
+                  </p>
+                </div>
+                {recentSessions.length > 0 && (
+                  <button 
+                    onClick={handleExportAllSessions}
+                    className="bg-green-500 text-white px-3 py-2 rounded-xl hover:bg-green-600 transition-all duration-300 flex items-center gap-2 text-sm"
+                    title="Export All Recent Sessions to Excel"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export All
+                  </button>
+                )}
+              </div>
+
+              {recentSessions.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No recent sessions</p>
+                  <p className="text-sm text-gray-500">
+                    Your session history will appear here
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {recentSessions.slice(0, 10).map((session) => (
+                    <div
+                      key={session.id}
+                      className={`rounded-2xl p-4 border hover:shadow-lg transition-all duration-300 cursor-pointer ${
+                        session.isActive 
+                          ? 'bg-green-50/80 border-green-200' 
+                          : 'bg-gray-50/80 border-gray-200'
+                      }`}
+                      onClick={() => handleViewSession(session)}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-gray-800">
+                          {session.subject}
+                        </h4>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                            session.isActive 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {session.isActive ? 'Active' : 'Ended'}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewSession(session);
+                            }}
+                            className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs hover:bg-blue-200 transition-colors flex items-center gap-1"
+                          >
+                            <Eye className="w-3 h-3" />
+                            View
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(session.createdAt)}
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <Clock className="w-3 h-3" />
+                          {formatTime(session.createdAt)}
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <Users className="w-3 h-3" />
+                          {session.attendeeCount || 0} students
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <MapPin className="w-3 h-3" />
+                          {session.location?.address?.slice(0, 20) || "Manual"}...
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Attendance Stats */}
             <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
               <h3 className="text-xl font-bold text-gray-800 mb-4">
@@ -457,7 +630,11 @@ const TeacherDashboard = ({ onLogout }) => {
                 </div>
                 {selectedSession && (
                   <div className="flex gap-2">
-                    <button className="bg-blue-500 text-white p-2 rounded-xl hover:bg-blue-600 transition-all duration-300">
+                    <button 
+                      onClick={handleExportAttendance}
+                      className="bg-blue-500 text-white p-2 rounded-xl hover:bg-blue-600 transition-all duration-300"
+                      title="Export to Excel"
+                    >
                       <Download className="w-5 h-5" />
                     </button>
                     <button
@@ -465,6 +642,7 @@ const TeacherDashboard = ({ onLogout }) => {
                         loadSessionAttendance(selectedSession.sessionId)
                       }
                       className="bg-gray-200 text-gray-700 p-2 rounded-xl hover:bg-gray-300 transition-all duration-300"
+                      title="Refresh"
                     >
                       <RefreshCw className="w-5 h-5" />
                     </button>

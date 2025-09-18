@@ -9,6 +9,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   serverTimestamp,
   arrayUnion,
 } from "firebase/firestore";
@@ -137,6 +138,40 @@ export const getTeacherSessions = async (teacherId) => {
     };
   } catch (error) {
     console.error("Error getting teacher sessions:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
+
+// Get all sessions (active and recent) for a teacher
+export const getTeacherAllSessions = async (teacherId, limit = 20) => {
+  try {
+    const q = query(
+      collection(db, "attendanceSessions"),
+      where("teacherId", "==", teacherId),
+      orderBy("createdAt", "desc"),
+      limit(limit)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const sessions = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      sessions.push({
+        id: doc.id,
+        ...data,
+      });
+    });
+
+    return {
+      success: true,
+      sessions,
+    };
+  } catch (error) {
+    console.error("Error getting all teacher sessions:", error);
     return {
       success: false,
       error: error.message,

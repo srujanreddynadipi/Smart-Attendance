@@ -165,6 +165,7 @@ const FaceRegistration = ({ onFaceRegistered, onRegistrationComplete, onSkip }) 
             screenshotFormat="image/jpeg"
             videoConstraints={videoConstraints}
             className="w-full rounded-xl"
+            style={{ transform: 'scaleX(-1)' }}
           />
           
           {/* Face quality indicator */}
